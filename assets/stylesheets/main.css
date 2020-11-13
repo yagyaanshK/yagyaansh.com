@@ -1,0 +1,235 @@
+/* http://meyerweb.com/eric/tools/css/reset/ 
+   v2.0 | 20110126
+   License: none (public domain)
+*/
+
+html, body, div, span, applet, object, iframe,
+h1, h2, h3, h4, h5, h6, p, blockquote, pre,
+a, abbr, acronym, address, big, cite, code,
+del, dfn, em, img, ins, kbd, q, s, samp,
+small, strike, strong, sub, sup, tt, var,
+b, u, i, center,
+dl, dt, dd, ol, ul, li,
+fieldset, form, label, legend,
+table, caption, tbody, tfoot, thead, tr, th, td,
+article, aside, canvas, details, embed, 
+figure, figcaption, footer, header, hgroup, 
+menu, nav, output, ruby, section, summary,
+time, mark, audio, video {
+	margin: 0;
+	padding: 0;
+	border: 0;
+	font-size: 100%;
+	font: inherit;
+	vertical-align: baseline;
+}
+/* HTML5 display-role reset for older browsers */
+article, aside, details, figcaption, figure, 
+footer, header, hgroup, menu, nav, section {
+	display: block;
+}
+body {
+	line-height: 1;
+}
+ol, ul {
+	list-style: none;
+}
+blockquote, q {
+	quotes: none;
+}
+blockquote:before, blockquote:after,
+q:before, q:after {
+	content: '';
+	content: none;
+}
+table {
+	border-collapse: collapse;
+	border-spacing: 0;
+}
+
+/*
+real deal starts from here --------------------------------------------------------------------------------------------------------------
+*/
+
+@font-face{
+	font-family: lvnm;
+	src: url(assets/fonts/lvnm.ttf);
+}
+
+@font-face{
+	font-family: FuturaPTBold;
+	src: url(assets/fonts/FuturaPTBold.otf);
+	
+}
+
+@font-face{
+	font-family: Gabriola;
+	src: url(assets/fonts/Gabriola.ttf);
+}
+
+body{
+	background-color: #ffffff;
+	padding-top: 5%;
+	margin: 0;
+	font-family: lvnm, FuturaPTBold, Gabriola;
+	
+}
+
+.vector{
+	width: 744.4px;
+	display: inline-block;
+
+}
+
+.details{
+	width: 744.4px;
+	display: inline-block;
+	vertical-align: top;
+	margin-top: 225px;
+	
+
+}
+
+h1{
+	font-size: 100px;
+	text-align: center;
+	margin-bottom: 5px;
+	font-family: lvnm, FuturaPTBold, Gabriola;
+	color: #11264c;
+	font-weight: bold;
+	
+}
+
+.alive{
+	font-size: 30px;
+	text-align: center;
+	margin-bottom: 25px;
+	color: #9ea5ac;
+}
+
+.mainbutton{
+	text-align: center;
+	margin-bottom: 25px;
+
+}
+.picturexyou{
+	font-size: 28px;	
+	padding: 8px;
+	vertical-align: middle;
+}
+
+.otherbuttons{
+	text-align: center;	
+	
+}
+
+
+.icon{
+	fill: #72001b;
+	height: 30px;
+	width: 30px;
+	padding: 3px;
+	vertical-align: middle;
+	border-style: hidden;
+	
+}
+
+
+div > a{
+	border: 2px;
+	border-style: hidden;
+	margin: 5px;
+	border-radius: 75px;
+	display: inline-block;
+
+}
+
+div > .picturexyou{
+	width: 150px;
+	color: white;
+	background-color: #11264c;
+}
+
+a {
+	text-decoration: none;
+}
+
+
+
+.mainbutton a:hover{
+	color: #11264c;
+	background-color: #e8e8e8;
+	transition: 0.3s;
+	transition-timing-function: ease-in-out;
+}
+
+.otherbuttons a:hover{
+	background-color: #e8e8e8;
+	transition: 0.3s;
+	transition-timing-function: ease-in-out;
+}
+
+.youtube:hover .icon{
+	transition: 0.3s;
+	transition-timing-function: ease-in-out;
+	fill:#ff0000;
+}
+
+.twitter:hover .icon{
+	transition: 0.3s;
+	transition-timing-function: ease-in-out;
+	fill:#1da1f2;
+}
+
+.git:hover .icon{
+	transition: 0.3s;
+	transition-timing-function: ease-in-out;
+	fill:#000000;
+}
+
+.linkedin:hover .icon{
+	transition: 0.3s;
+	transition-timing-function: ease-in-out;
+	fill:#2867b2;
+}
+
+.insta svg{
+	border-radius: 10px;
+	padding: 0px;
+	border: 0px;
+	margin:0px;
+	
+}
+.insta:hover svg{
+	transition: 0.5s;
+	transition-timing-function: ease-in-out;
+	background:radial-gradient(farthest-corner at 10% 90%,  #ffdc80, #fcaf45, #f77737, #f56040, #fd1d1d, #e1306c, #c13584, #833ab4, #5851db,#405de6);
+}
+
+.insta:hover .icon{
+	transition: 0.3s;
+	transition-timing-function: ease-in-out;
+	fill: #ffffff;
+}
+
+.px:hover .icon{
+	transition: 0.3s;
+	transition-timing-function: ease-in-out;
+	fill:#000000;
+}
+
+.mail:hover .icon{
+	transition: 0.3s;
+	transition-timing-function: ease-in-out;
+	fill:#11264c;
+}
+
+a.imdb:hover {background-color: #f5c518;}
+
+.imdb:hover .icon{
+	transition: 0.3s;
+	transition-timing-function: ease-in-out;
+	fill:#000000;
+}
+
+
