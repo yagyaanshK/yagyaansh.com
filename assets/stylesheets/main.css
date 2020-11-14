@@ -71,7 +71,8 @@ body{
 	background-color: #ffffff;
 	padding-top: 5%;
 	margin: 0;
-	font-family: 'Satisfy', cursive,'Oswald', 'lvnm', 'FuturaPTBold', 'Gabriola', sans-serif;
+	font-family: 'Poppins','Satisfy', cursive,'Oswald', 'lvnm', 'FuturaPTBold', 'Gabriola', sans-serif;
+	line-height: 1.3;
 	
 }
 
