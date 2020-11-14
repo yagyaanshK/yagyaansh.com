@@ -52,45 +52,58 @@ real deal starts from here -----------------------------------------------------
 */
 
 @font-face{
-	font-family: lvnm;
+	font-family: 'lvnm';
 	src: url(assets/fonts/lvnm.ttf);
 }
 
 @font-face{
-	font-family: FuturaPTBold;
+	font-family: 'FuturaPTBold';
 	src: url(assets/fonts/FuturaPTBold.otf);
 	
 }
 
 @font-face{
-	font-family: Gabriola;
+	font-family: 'Gabriola';
 	src: url(assets/fonts/Gabriola.ttf);
-}
-
-@font-face{
-	font-family: lvnm;
-	src: url(assets/fonts/lvnm.ttf);
 }
 
 body{
 	background-color: #ffffff;
 	padding-top: 5%;
 	margin: 0;
-	font-family: lvnm, FuturaPTBold, Gabriola;
+	font-family: 'Satisfy', cursive,'Oswald', 'lvnm', 'FuturaPTBold', 'Gabriola', sans-serif;
 	
 }
 
+
 .vector{
-	width: 744.4px;
-	display: inline-block;
+	width: 49%;
+	display: inline;
+	text-align: center;
+	margin-right:0px;
+	margin-left: 0px;	
+	padding: 0px;
+	vertical-align: middle;
+/* 
+	border-style: solid;
+	border-color: black;
+	border-width: 5px; */
 
 }
 
+
 .details{
-	width: 744.4px;
+	width: 49%;
+	/* height: 700px;*/
 	display: inline-block;
-	vertical-align: top;
-	margin-top: 225px;
+	margin-left: 0px;
+	margin-right: 0px;
+	vertical-align: middle;
+	
+	/* border-style: solid;
+	border-color: black;
+	border-width: 5px;
+	 */
 	
 
 }
@@ -99,33 +112,54 @@ h1{
 	font-size: 100px;
 	text-align: center;
 	margin-bottom: 5px;
-	font-family: lvnm, FuturaPTBold, Gabriola;
 	color: #11264c;
-	font-weight: bold;
+	font-weight: 400;
+/* 
+	border-style: solid;
+	border-color: black;
+	border-width: 5px;
+	 */
 	
 }
 
 .alive{
 	font-size: 30px;
 	text-align: center;
-	margin-bottom: 25px;
+	margin-top: 25px;
+	margin-bottom: 50px;
 	color: #9ea5ac;
+
+	/* border-style: solid;
+	border-color: black;
+	border-width: 5px;
+	 */
 }
 
 .mainbutton{
 	text-align: center;
 	margin-bottom: 25px;
 
+	/* border-style: solid;
+	border-color: black;
+	border-width: 5px;
+	 */
+
 }
 .picturexyou{
 	font-size: 28px;	
-	padding: 8px;
-	vertical-align: middle;
+	padding: 10px 25px 8px 25px; /*top right down left*/
+	width: fit-content;
+	color: white;
+	background-color: #11264c;
 }
 
 .otherbuttons{
-	text-align: center;	
-	
+	text-align: center;		
+
+	/* border-style: solid;
+	border-color: black;
+	border-width: 5px;
+	 */
 }
 
 
@@ -140,22 +174,11 @@ h1{
 }
 
 
-div > a{
-	border: 2px;
+a{
 	border-style: hidden;
 	margin: 5px;
 	border-radius: 75px;
 	display: inline-block;
-
-}
-
-div > .picturexyou{
-	width:fit-content;
-	color: white;
-	background-color: #11264c;
-}
-
-a {
 	text-decoration: none;
 }
 
@@ -198,23 +221,23 @@ a {
 	fill:#2867b2;
 }
 
-.insta svg{
+/* .insta svg{
 	border-radius: 10px;
 	padding: 0px;
 	border: 0px;
-	margin:0px;
-	
-}
-.insta:hover svg{
-	transition: 0.5s;
-	transition-timing-function: ease-in-out;
-	background:radial-gradient(farthest-corner at 10% 90%,  #ffdc80, #fcaf45, #f77737, #f56040, #fd1d1d, #e1306c, #c13584, #833ab4, #5851db,#405de6);
-}
+	margin:0px;	
+} */
 
+.insta:hover{
+	background:radial-gradient(farthest-corner at 10% 90%,  #ffdc80, #fcaf45, #f77737, #f56040, #fd1d1d, #e1306c, #c13584, #833ab4, #5851db,#405de6);
+
+}
 .insta:hover .icon{
 	transition: 0.3s;
 	transition-timing-function: ease-in-out;
+
 	fill: #ffffff;
+	
 }
 
 .px:hover .icon{
@@ -237,4 +260,10 @@ a.imdb:hover {background-color: #f5c518;}
 	fill:#000000;
 }
 
+a.eyeem:hover {background-color: #000000;}
+
+.eyeem:hover .icon{
+	filter: grayscale(100%) brightness(0%) invert(100%);
+
+}
 
