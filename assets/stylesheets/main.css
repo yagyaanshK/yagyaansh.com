@@ -84,7 +84,7 @@ body{
 	margin-right:0px;
 	margin-left: 0px;	
 	padding: 0px;
-	vertical-align: middle;
+	vertical-align: baseline;
 /* 
 	border-style: solid;
 	border-color: black;
@@ -99,7 +99,8 @@ body{
 	display: inline-block;
 	margin-left: 0px;
 	margin-right: 0px;
-	vertical-align: middle;
+	vertical-align: top;
+	margin-top:70px;
 	
 	/* border-style: solid;
 	border-color: black;
@@ -267,4 +268,12 @@ a.eyeem:hover {background-color: #000000;}
 	filter: grayscale(100%) brightness(0%) invert(100%);
 
 }
+
+a.getty:hover {background-color: #000000;}
+
+.getty:hover .icon{
+	filter: grayscale(100%) brightness(0%) invert(100%);
+
+}
+
 
