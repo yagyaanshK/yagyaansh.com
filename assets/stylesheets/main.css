@@ -235,7 +235,6 @@ a{
 
 .insta:hover{
 	background:radial-gradient(farthest-corner at 10% 90%,  #ffdc80, #fcaf45, #f77737, #f56040, #fd1d1d, #e1306c, #c13584, #833ab4, #5851db,#405de6);
-
 }
 .insta:hover .icon{
 	transition: 0.3s;
@@ -276,6 +275,16 @@ a.getty:hover {background-color: #000000;}
 
 .getty:hover .icon{
 	filter: grayscale(100%) brightness(0%) invert(100%);
+
+}
+
+a.pexels:hover {background-color: #05A081;}
+
+.pexels:hover .icon{
+	transition: 0.3s;
+	transition-timing-function: ease-in-out;
+	fill:#fff;
+	
 
 }
 
