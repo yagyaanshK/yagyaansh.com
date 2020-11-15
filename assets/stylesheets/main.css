@@ -71,7 +71,7 @@ body{
 	background-color: #ffffff;
 	padding-top: 5%;
 	margin: 0;
-	font-family: 'Poppins','Satisfy', cursive,'Oswald', 'lvnm', 'FuturaPTBold', 'Gabriola', sans-serif;
+	font-family: 'Quicksand','Poppins','Satisfy', cursive,'Oswald', 'lvnm', 'FuturaPTBold', 'Gabriola', sans-serif;
 	line-height: 1.3;
 	
 }
@@ -151,8 +151,8 @@ h1{
 
 }
 .picturexyou{
-	font-size: 28px;	
-	padding: 10px 25px 8px 25px; /*top right down left*/
+	font-size: 22px;	
+	padding: 8px 25px 8px 25px; /*top right down left*/
 	width: fit-content;
 	color: white;
 	background-color: #11264c;
