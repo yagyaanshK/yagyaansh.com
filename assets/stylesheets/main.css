@@ -78,13 +78,13 @@ body{
 
 
 .vector{
-	width: 49%;
+	width: 744.4px;
 	display: inline;
 	text-align: center;
 	margin-right:0px;
 	margin-left: 0px;	
 	padding: 0px;
-	vertical-align: baseline;
+	vertical-align: bottom;
 /* 
 	border-style: solid;
 	border-color: black;
@@ -94,13 +94,15 @@ body{
 
 
 .details{
-	width: 49%;
+	width: 744.4px;
 	/* height: 700px;*/
 	display: inline-block;
 	margin-left: 0px;
 	margin-right: 0px;
 	vertical-align: top;
 	margin-top:70px;
+	margin-bottom: 0px;
+	text-align: center;
 	
 	/* border-style: solid;
 	border-color: black;
@@ -116,6 +118,7 @@ h1{
 	margin-bottom: 5px;
 	color: #11264c;
 	font-weight: 400;
+	text-align: center;
 /* 
 	border-style: solid;
 	border-color: black;
