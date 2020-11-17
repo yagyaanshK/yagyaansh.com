@@ -91,11 +91,12 @@ nav{
 
 main{
 	padding-top: 25px;	
+	text-align:center;
 }
 
 
 .vector{
-	width: 49%;
+	width: 744.4px;
 	display: inline-block;
 	text-align: center;
 	margin-right:0px;
@@ -111,7 +112,7 @@ main{
 
 
 .details{
-	width: 49%;
+	width: 744.44px;
 	/* height: 700px;*/
 	display: inline-block;
 	margin-left: 0px;
