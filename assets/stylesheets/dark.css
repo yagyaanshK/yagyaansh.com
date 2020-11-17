@@ -95,7 +95,7 @@ main{
 
 .vector{
 	width: 744.4px;
-	display: inline;
+	display: inline-block;
 	text-align: center;
 	margin-right:0px;
 	margin-left: 0px;	

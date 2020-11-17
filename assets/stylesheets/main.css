@@ -95,7 +95,7 @@ main{
 
 
 .vector{
-	width: 744.4px;
+	width: 49%;
 	display: inline-block;
 	text-align: center;
 	margin-right:0px;
@@ -111,7 +111,7 @@ main{
 
 
 .details{
-	width: 744.4px;
+	width: 49%;
 	/* height: 700px;*/
 	display: inline-block;
 	margin-left: 0px;
