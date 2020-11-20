@@ -77,15 +77,19 @@ body{
 }
 
 
-nav{	
+nav.theme{	
 	display: inline;
 	text-align: right;	
 }
 
-.theme{
+div.theme{
 	width: content;
 	margin: 30px 10px 0px 0px;
 	color: white;
+}
+
+.theme a{
+	color:white;
 }
 
 main{
@@ -96,7 +100,7 @@ main{
 
 .vector{
 	width: 744.4px;
-	display: inline-block;
+	display: inline;
 	text-align: center;
 	margin-right:0px;
 	margin-left: 0px;	
@@ -168,6 +172,15 @@ h1{
 	 */
 
 }
+
+.picturexyou, .otherbuttons a{
+	border-style: hidden;
+	margin: 5px;
+	border-radius: 75px;
+	display: inline-block;
+	text-decoration: none;
+}
+
 .picturexyou{
 	font-size: 22px;	
 	padding: 8px 25px 8px 25px; /*top right down left*/
@@ -185,6 +198,10 @@ h1{
 	 */
 }
 
+.otherbuttons a{	/* so that by chance when svg doesn't load, the link is still the same color */
+	color: #ffa75f;
+}
+
 
 .icon{
 	fill: #ffa75f;
@@ -192,20 +209,8 @@ h1{
 	width: 30px;
 	padding: 3px;
 	vertical-align: middle;
-	border-style: hidden;
-	
+	border-style: hidden;	
 }
-
-
-main a{
-	border-style: hidden;
-	margin: 5px;
-	border-radius: 75px;
-	display: inline-block;
-	text-decoration: none;
-	color: #ffa75f;
-}
-
 
 
 .mainbutton a:hover{
@@ -303,8 +308,19 @@ a.pexels:hover {background-color: #05A081;}
 	transition: 0.3s;
 	transition-timing-function: ease-in-out;
 	fill:#fff;
-	
+}
 
+nav.pages{
+	padding-top:10px;
+	display:inline-block;
+	text-align: center;
+
+}
+
+nav.pages a{
+	padding:0 10px 0 10px;	
+	color: #fff;
+	text-decoration: underline;
 }
 
 
