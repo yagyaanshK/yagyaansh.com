@@ -155,6 +155,12 @@ p{
 	color: black;
 }
 
+div.quote{
+	display: inline-block;
+	width: 85%;
+	text-align: center;
+}
+
 p a{
 	text-decoration:underline;
 	color: #72001b;
@@ -163,6 +169,10 @@ p a{
 b{
 	font-family: "Poppins";
 	font-weight: bold;
+}
+
+i{
+	font-style: italic;
 }
 
 p img{
