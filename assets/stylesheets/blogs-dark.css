@@ -69,7 +69,7 @@ real deal starts from here -----------------------------------------------------
 }
 
 body{
-	background-color: #ffffff;	
+	background-color: #11264c;	
 	margin: 0;
 	font-family: 'Quicksand','Poppins','Satisfy', cursive,'Oswald', 'lvnm', 'FuturaPTBold', 'Gabriola', sans-serif;
 	line-height: 1.3;	
@@ -85,7 +85,7 @@ nav.theme{
 div.theme{
 	width: content;
 	margin: 30px 10px 0px 0px;
-	color: black;
+	color: white;
 }
 
 /* .theme a{
@@ -93,7 +93,7 @@ div.theme{
 } */
 
 button.theme{
-	color: black;
+	color: white;
 	border-style: none;
 	background-color: inherit;
 }
@@ -110,7 +110,7 @@ main{
 h1{
 	font-size: 110px;
 	margin-bottom: 3%;
-	color: #72001b;
+	color: #ffa75f;
 	
 	font-weight: 580;
     text-align: center;
@@ -127,11 +127,11 @@ ul{
     margin-left: 15%;
     list-style: circle;
     max-width: max-content;
-    color: #11264c;
+    color: #ffffff;
 }
 
 ul a{
-    color: #11264c;
+    color: #ffffff;
     text-decoration: underline;
 }
 
