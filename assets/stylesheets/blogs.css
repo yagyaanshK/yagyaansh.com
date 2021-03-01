@@ -96,6 +96,8 @@ button.theme{
 	color: black;
 	border-style: none;
 	background-color: inherit;
+	font-size: min(4vw,16px);
+
 }
 
 button:hover {
@@ -108,7 +110,7 @@ main{
 }
 
 h1{
-	font-size: 110px;
+	font-size: min(10vw,110px);
 	margin-bottom: 3%;
 	color: #72001b;
 	
@@ -123,7 +125,7 @@ h1{
 }
 
 ul{
-    font-size: 35px;	
+    font-size: min(4vw,35px);	
     margin-left: 15%;
     list-style: circle;
     max-width: max-content;

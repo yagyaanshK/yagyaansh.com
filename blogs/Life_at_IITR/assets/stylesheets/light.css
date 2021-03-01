@@ -153,11 +153,18 @@ p{
 	font-size: min(3vw,25px);
 	text-align: justify;
 	color: black;
+	line-height: max(1.5rem,normal);
 }
 
 div.quote{
 	display: inline-block;
 	width: 85%;
+	text-align: center;
+}
+
+div.image{
+	display: inline-block;
+	width: 100%;
 	text-align: center;
 }
 
@@ -175,10 +182,13 @@ i{
 	font-style: italic;
 }
 
-p img{
+img.inpara{
 	display: inline-block;
 	/* width: 7vw; */
-	height: 25vh;
+	/* height: 25vh;
+	width: auto; */
+	width:100%;
+	height:auto;
 }
 
 footer.main{
