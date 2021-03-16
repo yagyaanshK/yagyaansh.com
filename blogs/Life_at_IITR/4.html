@@ -84,11 +84,11 @@
                 <br>
                 <div class="image">
                     <a href="https://www.youtube.com/watch?v=RdiYLulIYqw" target="_blank">
-                        <img class="inpara" src="assets/images/thomso/DSC06548.JPG" alt="step-up" title="step-up">
+                        <img class="inpara" src="assets/images/thomso/DSC06548.JPG" alt="step-up" title="step-up" loading="lazy">
                     </a>
-                    <img class="inpara" src="assets/images/thomso/DSC06581.JPG" alt="lights" title="lights">
-                    <img class="inpara" src="assets/images/thomso/DSC06597.JPG" alt="road" title="road">
-                    <img class="inpara" src="assets/images/thomso/DSC06604.JPG" alt="path" title="path">
+                    <img class="inpara" src="assets/images/thomso/DSC06581.JPG" alt="lights" title="lights" loading="lazy">
+                    <img class="inpara" src="assets/images/thomso/DSC06597.JPG" alt="road" title="road" loading="lazy">
+                    <img class="inpara" src="assets/images/thomso/DSC06604.JPG" alt="path" title="path" loading="lazy">
                 </div>
             </p>
             <br>
@@ -135,11 +135,43 @@
                 or I said anything wrong. Also, feel free to share your thoughts and experiences with me, which you think should have
                 been a part of this blog.
             </p>
+            <br>
+            <section class="comments">
+                <!-- <h3>Comments</h3> -->
+                
+                        <div id="disqus_thread"></div>
+                        <script>                          
+                            var disqus_config = function () {
+                            this.page.url = 'https://yagyaansh.com/blogs/Life_at_IITR/4.html';  // Replace PAGE_URL with your page's canonical URL variable
+                            this.page.identifier = 'blogs/Life_at_IITR/4.html'; // Replace PAGE_IDENTIFIER with your page's unique identifier variable
+                            this.page.title = 'Conclusion';
+                            };
+                            
+                            (function() { // DON'T EDIT BELOW THIS LINE
+                            var d = document, s = d.createElement('script');
+                            s.src = 'https://yagyaansh.disqus.com/embed.js';
+                            s.setAttribute('data-timestamp', +new Date());
+                            (d.head || d.body).appendChild(s);
+                            })();
+                        </script>
+                        <noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript">comments.</a></noscript>
+
+                        <!-- How to display comment count
+                        Place the following code before your site's closing </body> tag: -->
+
+                        <script id="dsq-count-scr" src="//yagyaansh.disqus.com/count.js" async></script>
+
+                        <!-- Append #disqus_thread to the href attribute in your links. This will tell Disqus which links to look up and return the comment count. For example: <a href="http://foo.com/bar.html#disqus_thread">Link</a>. -->                    
+
+                        <!-- <form>
+                            self implememntation of comments
+                        </form> -->
+            </section>
             <footer class="main">
                 <nav>
                     <a class="prev" href="3.html">&lt;Prev</a>
                     <a class="home" href="../../blogs.html">Home</a>
-                    <a class="next" href="">Next&gt;</a>
+                    <a class="next" href="../nuclear_energy/nuclear_energy.html">Next&gt;</a>
                 </nav>
             </footer>
         </main>

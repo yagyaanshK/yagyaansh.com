@@ -155,7 +155,16 @@ h2{
     text-align: left;
 }
 
-p{
+h3{
+	font-size: min(3.5vw,30px);
+	color: #ffa75f;
+	text-decoration: underline dotted;
+	
+	/* font-weight: 580; */
+    text-align: left;
+}
+
+p,ul,ol,details{
 	font-size: min(3vw,25px); /*25px;*/
 	text-align: justify;
 	color: white;
@@ -165,7 +174,34 @@ p{
 @media screen and (min-width: 2160px) {
 	h1{font-size: 10vw;}
 	h2{font-size: 5vw;}	
-	p{font-size: 3vw;}		
+	h3{font-size: 3.5vw;}
+	p,ul,ol,details{font-size: 3vw;}		
+}
+
+ul li{
+	list-style: circle;
+	list-style-position: inside;
+	/* text-decoration: underline dashed; */
+}
+
+ol li{
+	list-style: decimal;
+	list-style-position: inside;
+	/* text-decoration: underline dashed; */
+}
+
+ol li::marker{
+	content:counter(list-item) ".)\2000";
+}
+
+details summary{
+	cursor:pointer;
+	text-decoration:underline dotted;	
+}
+
+details[open="open"] summary{
+	list-style-type: circle;
+	text-decoration:underline dotted;	
 }
 
 div.quote{
@@ -221,6 +257,20 @@ b{
 
 i{
 	font-style: italic;
+}
+
+u{
+	text-decoration: underline;
+}
+
+sup{
+	font-size: small;
+	vertical-align: top;
+}
+
+sub{
+	font-size: 75%;
+	vertical-align: sub;	
 }
 
 footer.main{

@@ -3,7 +3,7 @@ function switchTheme(){
     // alert("function called");   
     // alert(theme);     
     if(theme == 'assets/stylesheets/main.css'){
-        document.getElementById('theme').href = 'assets/stylesheets/dark.css';
+        document.getElementById('theme').href = 'assets/stylesheets/main-dark.css';
         document.getElementById('imgtheme').src = 'assets/images/blah.png';
         localStorage["theme"] = dark;
         // alert("switching to dark");

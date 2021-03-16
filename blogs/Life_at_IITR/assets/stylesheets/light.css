@@ -68,10 +68,17 @@ real deal starts from here -----------------------------------------------------
 	src: url(assets/fonts/Gabriola.ttf);
 }
 
+@font-face {
+    font-family: 'Gordita Regular';
+    font-style: normal;
+    font-weight: normal;
+    src: local('Gordita Regular'), url('Gordita Regular.woff') format('woff');
+}
+
 body{
 	background-color: #ffffff;	
 	margin: 0;
-	font-family: 'Quicksand','Poppins','Satisfy', cursive,'Oswald', 'lvnm', 'FuturaPTBold', 'Gabriola', sans-serif;
+	font-family: 'Gordita Regular','Quicksand','Poppins','Satisfy', cursive,'Oswald', 'lvnm', 'FuturaPTBold', 'Gabriola', sans-serif;
 	line-height: 1.3;	
     /* max-width: max-content; */
     text-align: center;
@@ -125,7 +132,7 @@ main{
 }
 
 h1{
-	font-size: min(10vw,110px);
+	font-size: min(10vw,110px); 
 	margin-bottom: 3%;
 	color: #72001b;
 	
@@ -137,11 +144,10 @@ h1{
 	border-color: black;
 	border-width: 5px;
 	 */
-	
 }
 
 h2{
-	font-size: min(5vw,55px);
+	font-size: min(5vw,55px); 
 	margin-bottom: 3%;
 	color: #72001b;
 	
@@ -150,10 +156,16 @@ h2{
 }
 
 p{
-	font-size: min(3vw,25px);
+	font-size: min(3vw,25px); 
 	text-align: justify;
 	color: black;
 	line-height: max(1.5rem,normal);
+}
+
+@media screen and (min-width: 2160px) {
+	h1{font-size: 10vw;}
+	h2{font-size: 5vw;}	
+	p{font-size: 3vw;}		
 }
 
 div.quote{
@@ -162,10 +174,39 @@ div.quote{
 	text-align: center;
 }
 
-div.image{
+/* !---------old------------------ */
+/* div.image{
 	display: inline-block;
 	width: 100%;
 	text-align: center;
+} */
+/* !--------------------------------- */
+/* !-----new---------------- */
+div.image{	
+	display: flex;
+	flex-direction:row;
+	justify-content: center;
+	align-items: center;
+	width: 100%;
+	height: auto;
+	text-align: center;
+	overflow-x: scroll;
+}
+/* 
+div.flex-item{
+	width: 100rem;
+	
+} */
+
+/* !--------------------------------- */
+
+img.inpara{
+	display: inline-block;
+	/* width: 7vw; */
+	/* height: 25vh;
+	width: auto; */
+	width:100%;
+	height:auto;
 }
 
 p a{
@@ -182,15 +223,6 @@ i{
 	font-style: italic;
 }
 
-img.inpara{
-	display: inline-block;
-	/* width: 7vw; */
-	/* height: 25vh;
-	width: auto; */
-	width:100%;
-	height:auto;
-}
-
 footer.main{
 	margin-top: 2%;
 	margin-bottom: 2%;
@@ -198,7 +230,7 @@ footer.main{
 }
 
 footer a{
-	color: #72001b;
+	color:#72001b;
 	text-decoration: underline;
 	font-size: min(3vw,25px);
 }
@@ -220,4 +252,3 @@ footer a{
 	float: center;
 	padding-left: 15%;
 }
-
