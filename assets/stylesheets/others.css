@@ -133,13 +133,20 @@ h1{
 	 */	
 }
 
+div.list{
+	margin:0 20px 0 0;
+	width: content;
+	text-align: center;
+}
+
 ul{
-    font-size: min(3vw,25px);	
-    margin-left: 15%;
-	margin-right: 10%;
+	display: inline-block;
+    font-size: min(3vw,22px);
     list-style: circle;
-    max-width: max-content;
     color: #11264c;
+	text-align: left;
+	padding-left: 4rem;
+	list-style-position: outside;	
 }
 
 ul a{
@@ -147,12 +154,9 @@ ul a{
     text-decoration: underline;
 }
 
-ul li{
+li{
+	display: list-item;
 	margin-bottom: 10px;
-}
-
-li {
-	text-align: left;
 }
 
 sup{
