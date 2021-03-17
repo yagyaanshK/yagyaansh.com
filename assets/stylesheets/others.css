@@ -151,7 +151,8 @@ ul{
 
 ul a{
     color: #11264c;
-    text-decoration: underline 2%;
+    text-decoration: underline;
+	text-decoration-thickness: 3%;
 }
 
 li{
