@@ -141,7 +141,7 @@ main{
 	 */
 }
 
-@media screen and (min-width: 2160px){
+@media screen and (min-width: 2160px){ /*to be added to main.css*/
 	.vector{width:49%}
 	.details{width:50%;
 	margin-top: 25vh;}
@@ -184,12 +184,11 @@ h1{
 	 */
 }
 
-.picturexyou, .otherbuttons a{
-	border-style: hidden;
-	margin: 5px;
-	border-radius: 75px;
-	display: inline-block;
-	text-decoration: none;
+.mainbutton a:hover,.mainbutton a:focus{
+	/* color: #fff; */
+	background-color: #e8e8e8e0;
+	transition: 0.3s;
+	transition-timing-function: ease-in-out;
 }
 
 .picturexyou{
@@ -198,6 +197,14 @@ h1{
 	width: fit-content;
 	color: #11264c;
 	background-color: #fff;
+}
+
+.picturexyou, .otherbuttons a{
+	border-style: hidden;
+	margin: 5px;
+	border-radius: 75px;
+	display: inline-block;
+	text-decoration: none;
 }
 
 .otherbuttons{
@@ -209,10 +216,15 @@ h1{
 	 */
 }
 
-.otherbuttons a{	/* so that by chance when svg doesn't load, the link is still the same color */
-	color: #ffa75f;
+.otherbuttons a:hover,.otherbuttons a:focus{
+	background-color: #e8e8e8;
+	transition: 0.3s;
+	transition-timing-function: ease-in-out;
 }
 
+/* .otherbuttons a{	/*so that by chance when svg doesn't load, the link is still the same color
+	color: #ffa75f;
+} */
 
 .icon{
 	fill: #ffa75f;
@@ -222,44 +234,55 @@ h1{
 	vertical-align: middle;
 	border-style: hidden;	
 }
+/* ---------------------------------------------------------------------- */
+/* a.getty:hover,a.getty:focus {background-color: #000000;}                 in case of using image instead of svg path
 
+.getty:hover .icon,.getty:focus .icon{
+	filter: grayscale(100%) brightness(0%) invert(100%);
+} */
 
-.mainbutton a:hover{
-	color: #fff;
-	background-color: #223b69;
+a.getty:hover,a.getty:focus {background-color: black;}
+
+.getty:hover .icon,.getty:focus .icon{
 	transition: 0.3s;
 	transition-timing-function: ease-in-out;
+	fill:#fff;
 }
+/* -------------------------------------------------------------------- */
+a.pexels:hover,a.pexels:focus {background-color: #05A081;}
 
-.otherbuttons a:hover{
-	background-color: #e8e8e8;
+.pexels:hover .icon,.pexels:focus .icon{
 	transition: 0.3s;
 	transition-timing-function: ease-in-out;
+	fill:#fff;
 }
+/* -------------------------------------------------------------------- */
+/* a.eyeem:hover,a.eyeem:focus {background-color: #000000;}
 
-.youtube:hover .icon{
+.eyeem:hover .icon,.eyeem:focus .icon{
+	filter: grayscale(100%) brightness(0%) invert(100%);
+} */
+
+a.eyeem:hover,a.eyeem:focus {background-color: #000000;}
+
+.eyeem:hover .icon,.eyeem:focus .icon{
 	transition: 0.3s;
 	transition-timing-function: ease-in-out;
-	fill:#ff0000;
+	fill:#fff;
 }
-
-.twitter:hover .icon{
-	transition: 0.3s;
-	transition-timing-function: ease-in-out;
-	fill:#1da1f2;
-}
-
-.git:hover .icon{
+/* ---------------------------------------------------------------------------- */
+.px:hover .icon,.px:focus .icon{
 	transition: 0.3s;
 	transition-timing-function: ease-in-out;
 	fill:#000000;
 }
-
-.linkedin:hover .icon{
+/* --------------------------------------------------------------------------- */
+.unsplash:hover .icon,.unsplash:focus .icon{
 	transition: 0.3s;
 	transition-timing-function: ease-in-out;
-	fill:#2867b2;
+	fill:#000000;
 }
+/* ------------------------------------------------------------------------------- */
 
 /* .insta svg{
 	border-radius: 10px;
@@ -268,59 +291,56 @@ h1{
 	margin:0px;	
 } */
 
-.insta:hover{
+.insta:hover,.insta:focus{
 	background:radial-gradient(farthest-corner at 10% 90%,  #ffdc80, #fcaf45, #f77737, #f56040, #fd1d1d, #e1306c, #c13584, #833ab4, #5851db,#405de6);
+	/* transition: 0.3s;  doesn't work 
+	transition-timing-function: ease-in-out; */
 }
-.insta:hover .icon{
+.insta:hover .icon,.insta:focus .icon{
 	transition: 0.3s;
 	transition-timing-function: ease-in-out;
 
 	fill: #ffffff;
-	
 }
-
-.px:hover .icon{
+/* --------------------------------------------------------------------------------------- */
+.youtube:hover .icon,.youtube:focus .icon{
+	transition: 0.3s;
+	transition-timing-function: ease-in-out;
+	fill:#ff0000;
+}
+/* --------------------------------------------------------------- */
+.twitter:hover .icon, .twitter:focus .icon{
+	transition: 0.3s;
+	transition-timing-function: ease-in-out;
+	fill:#1da1f2;
+}
+/* ------------------------------------------------------------ */
+.git:hover .icon,.git:focus .icon{
 	transition: 0.3s;
 	transition-timing-function: ease-in-out;
 	fill:#000000;
 }
-
-.mail:hover .icon{
+/* ------------------------------------------------------------- */
+.linkedin:hover .icon,.linkedin:focus .icon{
+	transition: 0.3s;
+	transition-timing-function: ease-in-out;
+	fill:#2867b2;
+}
+/* ------------------------------------------------------------------- */
+.mail:hover .icon,.mail:focus .icon{
 	transition: 0.3s;
 	transition-timing-function: ease-in-out;
 	fill:#11264c;
 }
+/* --------------------------------------------------------------------------- */
+a.imdb:hover,a.imdb:focus {background-color: #f5c518;}
 
-a.imdb:hover {background-color: #f5c518;}
-
-.imdb:hover .icon{
+.imdb:hover .icon,.imdb:focus .icon{
 	transition: 0.3s;
 	transition-timing-function: ease-in-out;
 	fill:#000000;
 }
-
-a.eyeem:hover {background-color: #000000;}
-
-.eyeem:hover .icon{
-	filter: grayscale(100%) brightness(0%) invert(100%);
-
-}
-
-a.getty:hover {background-color: #000000;}
-
-.getty:hover .icon{
-	filter: grayscale(100%) brightness(0%) invert(100%);
-
-}
-
-a.pexels:hover {background-color: #05A081;}
-
-.pexels:hover .icon{
-	transition: 0.3s;
-	transition-timing-function: ease-in-out;
-	fill:#fff;
-}
-
+/* --------------------------------------------------------------------- */
 nav.pages{
 	padding-bottom:20px;
 	display:inline-block;

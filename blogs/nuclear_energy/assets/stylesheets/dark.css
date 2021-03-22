@@ -59,8 +59,7 @@ real deal starts from here -----------------------------------------------------
 
 @font-face{
 	font-family: 'FuturaPTBold';
-	src: url(assets/fonts/FuturaPTBold.otf);
-	
+	src: url(assets/fonts/FuturaPTBold.otf);	
 }
 
 @font-face{
@@ -68,12 +67,12 @@ real deal starts from here -----------------------------------------------------
 	src: url(assets/fonts/Gabriola.ttf);
 }
 
-@font-face {
+/* @font-face {
     font-family: 'Gordita Regular';
     font-style: normal;
     font-weight: normal;
     src: local('Gordita Regular'), url('Gordita Regular.woff') format('woff');
-}
+} */
 
 body{
 	background-color: #11264c;	

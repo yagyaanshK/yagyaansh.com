@@ -68,12 +68,12 @@ real deal starts from here -----------------------------------------------------
 	src: url(assets/fonts/Gabriola.ttf);
 }
 
-@font-face {
+/* @font-face {
     font-family: 'Gordita Regular';
     font-style: normal;
     font-weight: normal;
     src: local('Gordita Regular'), url('Gordita Regular.woff') format('woff');
-}
+} */
 
 body{
 	background-color: #ffffff;	
