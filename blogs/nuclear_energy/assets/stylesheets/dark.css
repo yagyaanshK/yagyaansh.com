@@ -301,3 +301,7 @@ footer a{
 	float: center;
 	padding-left: 15%;
 }
+
+p.comments{
+	border-top: solid 2px;
+}
