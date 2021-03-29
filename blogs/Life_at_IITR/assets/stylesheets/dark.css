@@ -78,7 +78,7 @@ real deal starts from here -----------------------------------------------------
 body{
 	background-color: #11264c;	
 	margin: 0;
-	font-family: 'Gordita Regular','Quicksand','Poppins','Satisfy', cursive,'Oswald', 'lvnm', 'FuturaPTBold', 'Gabriola', sans-serif;
+	font-family: 'Quicksand','Poppins','Satisfy', cursive,'Oswald', 'lvnm', 'FuturaPTBold', 'Gabriola', sans-serif;
 	line-height: 1.3;	
     /* max-width: max-content; */
     text-align: center;
@@ -135,7 +135,7 @@ h1{
 	font-size: min(10vw,110px);
 	margin-bottom: 3%;
 	color: #ffa75f;
-	
+	font-family: 'Gordita Regular','Quicksand','Poppins','Satisfy', cursive,'Oswald', 'lvnm', 'FuturaPTBold', 'Gabriola', sans-serif;
 	font-weight: 580;
     text-align: left;
     
@@ -150,7 +150,7 @@ h2{
 	font-size: min(5vw,55px);
 	margin-bottom: 3%;
 	color: #ffa75f;
-	
+	font-family: 'Gordita Regular','Quicksand','Poppins','Satisfy', cursive,'Oswald', 'lvnm', 'FuturaPTBold', 'Gabriola', sans-serif;
 	font-weight: 580;
     text-align: left;
 }
@@ -181,14 +181,16 @@ div.quote{
 	text-align: center;
 } */
 /* !--------------------------------- */
-/* !-----new---------------- */
+
+
+/* !-----new--------------------------------------------------------------- */
 div.image{	
 	display: flex;
 	flex-direction:row;
 	justify-content: center;
 	align-items: center;
 	width: 100%;
-	height: auto;
+	height: max-content;
 	text-align: center;
 	overflow-x: scroll;
 }
@@ -198,7 +200,7 @@ div.flex-item{
 	
 } */
 
-/* !--------------------------------- */
+/* !--------------------------------------------------------------------------- */
 
 img.inpara{
 	display: inline-block;
@@ -206,9 +208,76 @@ img.inpara{
 	/* height: 25vh;
 	width: auto; */
 	width:100%;
-	height:auto;
+	max-height:max-content;
 }
+/* !---------------------------------------------------------------------------------------- */
+/* -----------------taken from https://css-tricks.com/how-to-make-a-css-only-carousel/ ---------------------------------- */
+img.new {
+	display: block;
+	max-width: 100%;
+  }
 
+
+.wrapper {
+	display: grid;
+	overflow: hidden;
+	/* height: content;	 */
+	grid-template-rows: 2fr 0.5fr;
+	grid-gap: 10px;
+
+	max-height: 75vh;
+	}
+  
+.gallery {
+	display: flex;
+	overflow-x: scroll;
+	overflow-y: hidden;
+	scroll-snap-type: none;
+	scroll-behavior: smooth;
+	}
+
+.gallery__img {
+	scroll-snap-align: start;
+	/* margin-bottom: 10px; */
+	/* min-height: 100vh;  */
+	/* or 100% */
+	object-fit:contain;
+	padding: 0 5px;
+	}
+
+.lil-nav {
+	display: flex;
+	overflow-x: scroll;
+	overflow-y: hidden;  
+	/* grid-row-start: 2; */
+
+	/* align-items: center; */
+	/* text-align: center; */
+	/* height:  */
+	/* align-content:center; */
+	}
+  
+.lil-nav a {
+	display: inline-block;
+	height: 100%;
+	/* width: max-content;	 */
+	margin-bottom: 10px;
+	}
+  
+.lil-nav__img {
+	/* object-fit:contain; */
+	filter: saturate(0);
+	transition: 0.3s ease all;
+
+	height: 100%;
+	}
+
+.lil-nav__img:hover {
+	transform: scale(1.05);
+	filter: saturate(1);
+	}
+
+ /* !--------------------------------------------------------------------------------------------------  */
 p a{
 	text-decoration:underline;
 	color: #ffa75f;
@@ -221,6 +290,15 @@ b{
 
 i{
 	font-style: italic;
+}
+
+u{
+	text-decoration: underline;
+}
+
+sup{
+	font-size: small;
+	vertical-align: top;
 }
 
 footer.main{
