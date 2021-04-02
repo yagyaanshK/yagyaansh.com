@@ -186,6 +186,7 @@ ul li{
 ol li{
 	list-style: decimal;
 	list-style-position: inside;
+	padding-bottom:2%;
 	/* text-decoration: underline dashed; */
 }
 
