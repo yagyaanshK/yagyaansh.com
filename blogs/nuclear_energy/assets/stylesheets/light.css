@@ -303,6 +303,8 @@ footer a{
 	padding-left: 15%;
 }
 
-p.comments{
-	border-top: solid 2px;
+h2.comments{
+	padding-top: 3%;
+	margin-bottom: 0;
+	border-top: dotted 2px;
 }
