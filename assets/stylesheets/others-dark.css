@@ -160,6 +160,10 @@ li{
 	margin-bottom: 10px;
 }
 
+li.sub-bullet{
+	list-style: none;
+}
+
 sup{
 	font-size: small;
 	vertical-align: top;
