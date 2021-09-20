@@ -133,6 +133,16 @@ h1{
 	 */	
 }
 
+h2{
+	font-size: min(3vw,55px);
+	margin-bottom: 3%;
+	color: #ffa75f;
+	padding-left: 4rem;
+	
+	font-weight: 580;
+    text-align: center;
+}
+
 div.list{
 	margin:0 20px 0 0;
 	width: content;
@@ -172,4 +182,8 @@ sup{
 sub{
 	font-size: 75%;
 	vertical-align: sub;	
+}
+
+i{
+	font-style:italic
 }
