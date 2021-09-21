@@ -168,6 +168,7 @@ ul a{
 li{
 	display: list-item;
 	margin-bottom: 10px;
+	font-size: min(3vw,22px);
 }
 
 li.sub-bullet{
