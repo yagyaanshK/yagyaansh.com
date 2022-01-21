@@ -83,30 +83,40 @@ body{
     text-align: center;
 }
 
-nav.theme{	
-	display: inline;
-	text-align: right;	
+nav.top{	
+	display: inline-block;
+	width: 100%;
+	/* text-align: right;	 */
 }
 
 div.theme{
 	width: content;
+	float: right;
 	margin: 30px 10px 0px 0px;
-	/* 2% 0.7% */
 	color: white;
 }
-
-/* .theme a{
-	color:black;
-} */
 
 button.theme{
 	color: white;
 	border-style: none;
 	background-color: inherit;
+	font-size: min(4vw,16px);
 }
 
 button:hover {
 	cursor: pointer;
+}
+
+div.homepage{
+	width: content;
+	float: left;
+	margin: 30px 0px 0px 10px;
+	/* color: white; */
+}
+
+.homepage a{
+	color:white;
+	text-decoration:underline dotted;
 }
 
 main{
