@@ -177,7 +177,7 @@ li.nested{
 }
 
 sup{
-	font-size: small;
+	/* font-size: small; */
 	vertical-align: top;
 }
 
