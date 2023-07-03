@@ -119,7 +119,7 @@ main{
 }
 
 h1{
-	font-size: min(15vw,110px);
+	font-size: 15vw;
 	margin-bottom: 3%;
 	color: #ffa75f;
 	
@@ -134,7 +134,7 @@ h1{
 }
 
 h2{
-	font-size: xx-large;
+	font-size: 3vw;
 	margin-bottom: 3%;
 	color: #ffa75f;
 	padding-left: 4rem;
@@ -151,7 +151,7 @@ h2{
 
 ul{
     display: inline-block;
-    font-size: larger;
+    font-size: 3vw;
     list-style: circle;
     color: #ffffff;
 	text-align: left;
@@ -177,7 +177,7 @@ li.nested{
 }
 
 ul.nested{
-	font-size:large;
+	font-size:3vw;
 }
 
 sup{
