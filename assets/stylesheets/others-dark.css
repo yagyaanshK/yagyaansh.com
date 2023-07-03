@@ -172,6 +172,7 @@ li{
 
 li.sub-bullet{
 	list-style: none;
+	font-size: min(3vw,22px);
 }
 
 sup{
