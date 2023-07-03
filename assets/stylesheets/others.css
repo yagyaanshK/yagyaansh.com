@@ -171,10 +171,10 @@ li{
 }
 
 /* for making the circle/bullet disappear */
-/* li.nested{
+li.nested{
 	list-style: none;
-	" font-size: min(3vw,22px); no effect "
-} */
+	/* font-size: min(3vw,22px); no effect */
+}
 
 sup{
 	font-size: small;
