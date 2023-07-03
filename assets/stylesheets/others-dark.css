@@ -143,11 +143,11 @@ h2{
     text-align: center;
 }
 
-div.list{
+/* div.list{
 	margin:0 20px 0 0;
 	width: content;
 	text-align: center;
-}
+} */
 
 ul{
     display: inline-block;
@@ -170,9 +170,14 @@ li{
 	margin-bottom: 10px;
 }
 
-li.sub-bullet{
+/* for making the circle/bullet disappear */
+/* li.nested{
 	list-style: none;
-	font-size: min(3vw,22px);
+	" font-size: min(3vw,22px); no effect "
+} */
+
+ul.nested{
+	font-size:large;
 }
 
 sup{
