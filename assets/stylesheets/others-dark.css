@@ -134,7 +134,7 @@ h1{
 }
 
 h2{
-	font-size: 3vw;
+	font-size: 7vw;
 	margin-bottom: 3%;
 	color: #ffa75f;
 	padding-left: 4rem;
@@ -150,12 +150,10 @@ h2{
 } */
 
 ul{
-    display: inline-block;
-    font-size: 3vw;
     list-style: circle;
     color: #ffffff;
 	text-align: left;
-	padding-left: 4rem;
+	padding-left: 10vw;
 	list-style-position: outside;
 }
 
@@ -168,6 +166,7 @@ ul a{
 li{
 	display: list-item;
 	margin-bottom: 10px;
+	font-size: 3vw;
 }
 
 /* for making the circle/bullet disappear */
@@ -176,7 +175,7 @@ li.nested{
 	/* font-size: min(3vw,22px); no effect*/
 }
 
-ul.nested{
+ul.nested, li.nested a{
 	font-size:3vw;
 }
 
