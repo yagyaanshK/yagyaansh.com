@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vibe Code Projects</title>
+    <link rel="icon" type="image/x-icon" href="../assets/images/art.svg">
+    <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@300&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Satisfy&display=swap" rel="stylesheet">  
+    <link href="https://fonts.googleapis.com/css2?family=Poppins&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Quicksand&display=swap" rel="stylesheet">
+    <link id="theme" rel="stylesheet" title="light" href="../assets/stylesheets/main-dark.css">
+    <script src="../assets/js/main.js"></script>
+    <script>
+        function switchTheme() {
+            const themeLink = document.getElementById('theme');
+            const currentTheme = themeLink.getAttribute('href');
+            const newTheme = currentTheme.includes('main-dark.css') ? '../assets/stylesheets/main.css' : '../assets/stylesheets/main-dark.css';
+            themeLink.setAttribute('href', newTheme);
+
+            // Adjust footer gradient colors and href styling based on theme
+            const footer = document.querySelector('footer');
+            const exploreProjectsHeading = document.querySelector('.projects h2');
+            const links = document.querySelectorAll('a');
+            const listItems = document.querySelectorAll('.project-list li');
+
+            if (newTheme.includes('main.css')) {
+                footer.style.background = 'linear-gradient(to bottom, #ffffff,#3e82ff)'; // Light theme colors
+                footer.style.color = 'white';
+                exploreProjectsHeading.style.color = 'black'; // Dark color for light theme
+                links.forEach(link => {
+                    link.style.color = '#11264c';
+                    link.style.textDecoration = 'underline';
+                    link.addEventListener('mouseover', () => link.style.color = '#72001b');
+                    link.addEventListener('mouseout', () => link.style.color = '#11264c');
+                    link.addEventListener('focus', () => link.style.color = '#72001b');
+                    link.addEventListener('blur', () => link.style.color = '#11264c');
+                });
+                listItems.forEach(item => {
+                    item.style.color = '#11264c';
+                });
+            } else {
+                footer.style.background = 'linear-gradient(to bottom,#11264c, #3e82ff)'; // Dark theme colors
+                footer.style.color = 'white';
+                exploreProjectsHeading.style.color = 'white'; // White color for dark theme
+                links.forEach(link => {
+                    link.style.color = '#ffffff';
+                    link.style.textDecoration = 'underline';
+                    link.addEventListener('mouseover', () => link.style.color = '#ff5733');
+                    link.addEventListener('mouseout', () => link.style.color = '#ffffff');
+                    link.addEventListener('focus', () => link.style.color = '#ff5733');
+                    link.addEventListener('blur', () => link.style.color = '#ffffff');
+                });
+                listItems.forEach(item => {
+                    item.style.color = '#ffffff';
+                });
+            }
+        }
+    </script>
+    <style>
+        footer {
+            position: fixed;
+            bottom: 0;
+            width: 100%;
+            text-align: center;
+            background: linear-gradient(to bottom,#11264c, #3e82ff);
+            color: white;
+            padding: 10px 0;
+        }
+
+        a {
+            color: #ffffff;
+            text-decoration: underline;
+        }
+
+        a:hover, a:focus {
+            color: #ff5733; /* Changed hover and focus color */
+            text-decoration: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="wrapper">
+        <nav class="theme" style="position: absolute; top: 10px; right: 10px;">
+            <button class="theme" onclick="switchTheme();">Switch Theme</button>
+        </nav>
+        <header>
+            <h1>Just Vibing</h1>
+        </header>
+        <main>
+            <section class="projects">
+                <h2 style="text-align: center; font-size: 2rem; color: white;">Explore Projects</h2>
+                <ul class="project-list" style="margin: 0 auto; text-align: center; font-size: 1.5rem; list-style: none;">
+                    <li style="color: #ffffff;">• <a href="physics_catalog/laws_physics.html">Physics Equations</a></li>
+                    <li style="color: #ffffff;">• <a href="soon.html">Project 2</a></li>
+                    <li style="color: #ffffff;">• <a href="soon.html">Project 3</a></li>
+                    <li style="color: #ffffff;">• <a href="soon.html">Project 4</a></li>
+                </ul>
+            </section>
+        </main>
+        <footer>
+            <p>&copy; 2025 Yagyaansh Khaneja. All rights reserved.</p>
+        </footer>
+    </div>
+</body>
+</html>

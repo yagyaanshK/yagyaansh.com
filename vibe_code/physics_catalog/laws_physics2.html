@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Physics Laws and Equations</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f9;
+            color: #333;
+        }
+        header {
+            background-color: #6200ea;
+            color: white;
+            padding: 1rem;
+            text-align: center;
+        }
+        .container {
+            padding: 2rem;
+        }
+        .law {
+            background: white;
+            margin: 1rem 0;
+            padding: 1rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            cursor: pointer;
+        }
+        .law h2, .law h3 {
+            margin: 0;
+        }
+        .law p {
+            display: none;
+            margin-top: 0.5rem;
+        }
+        .law.active p {
+            display: block;
+        }
+        .animation {
+            margin-top: 1rem;
+            display: none;
+            text-align: center;
+        }
+        .law.active .animation {
+            display: block;
+        }
+        .svg-container {
+            width: 200px;
+            height: 200px;
+            margin: 0 auto;
+        }
+        .svg-animation {
+            width: 100%;
+            height: 100%;
+        }
+        @keyframes rotate {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        @keyframes oscillate {
+            0% { transform: translateX(0); }
+            50% { transform: translateX(50px); }
+            100% { transform: translateX(0); }
+        }
+        .rotate {
+            animation: rotate 4s linear infinite;
+        }
+        .oscillate {
+            animation: oscillate 2s ease-in-out infinite;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Interactive Physics Catalog</h1>
+    </header>
+
+    <div class="container">
+        <h2>Kinematics</h2>
+        <div class="law">
+            <h3>Newton's First Law</h3>
+            <p>An object remains at rest or in uniform motion unless acted upon by an external force.</p>
+            <div class="animation">
+                <div class="svg-container">
+                    <svg class="svg-animation" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+                        <rect x="10" y="45" width="20" height="10" fill="gray"></rect>
+                    </svg>
+                    <p>Visualizing inertia (object at rest).</p>
+                </div>
+            </div>
+        </div>
+        <div class="law">
+            <h3>Newton's Second Law</h3>
+            <p>F = ma (Force equals mass times acceleration)</p>
+            <div class="animation">
+                <div class="svg-container">
+                    <svg class="svg-animation" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+                        <rect x="10" y="40" width="20" height="20" fill="red" class="oscillate"></rect>
+                    </svg>
+                    <p>Visualizing force and acceleration.</p>
+                </div>
+            </div>
+        </div>
+        <div class="law">
+            <h3>Newton's Third Law</h3>
+            <p>For every action, there is an equal and opposite reaction.</p>
+            <div class="animation">
+                <div class="svg-container">
+                    <svg class="svg-animation" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+                        <rect x="20" y="60" width="20" height="10" fill="blue"></rect>
+                        <rect x="60" y="30" width="20" height="10" fill="orange"></rect>
+                    </svg>
+                    <p>Visualizing action and reaction.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <h2>Electrodynamics</h2>
+        <div class="law">
+            <h3>Ohm's Law</h3>
+            <p>V = IR (Voltage equals current times resistance)</p>
+            <div class="animation">
+                <div class="svg-container">
+                    <svg class="svg-animation" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+                        <line x1="10" y1="50" x2="90" y2="50" stroke="orange" stroke-width="5" class="rotate"></line>
+                    </svg>
+                    <p>Visualizing current flow.</p>
+                </div>
+            </div>
+        </div>
+        <div class="law">
+            <h3>Coulomb's Law</h3>
+            <p>F = k(q₁q₂)/r² (Electrostatic force between two charged particles)</p>
+            <div class="animation">
+                <div class="svg-container">
+                    <svg class="svg-animation" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+                        <circle cx="30" cy="50" r="10" fill="red"></circle>
+                        <circle cx="70" cy="50" r="10" fill="blue"></circle>
+                    </svg>
+                    <p>Visualizing electrostatic forces.</p>
+                </div>
+            </div>
+        </div>
+        <div class="law">
+            <h3>Kirchhoff's Circuit Laws</h3>
+            <p>The sum of currents entering a junction equals the sum of currents leaving it, and the sum of voltage drops in a closed loop equals zero.</p>
+            <div class="animation">
+                <div class="svg-container">
+                    <svg class="svg-animation" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+                        <circle cx="50" cy="50" r="30" fill="none" stroke="blue" stroke-width="4"></circle>
+                    </svg>
+                    <p>Visualizing current and voltage in circuits.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <h2>Magnetism</h2>
+        <div class="law">
+            <h3>Faraday's Law of Induction</h3>
+            <p>EMF = -dΦ/dt (The induced electromotive force in a closed circuit is proportional to the rate of change of magnetic flux through the circuit.)</p>
+            <div class="animation">
+                <div class="svg-container">
+                    <svg class="svg-animation" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+                        <circle cx="50" cy="50" r="30" fill="none" stroke="purple" stroke-width="4" class="rotate"></circle>
+                        <rect x="45" y="20" width="10" height="60" fill="gray"></rect>
+                    </svg>
+                    <p>Visualizing electromagnetic induction.</p>
+                </div>
+            </div>
+        </div>
+        <div class="law">
+            <h3>Biot-Savart Law</h3>
+            <p>dB = (μ₀/4π) * (Idl × r̂)/r² (Describes the magnetic field generated by a current-carrying wire.)</p>
+            <div class="animation">
+                <div class="svg-container">
+                    <svg class="svg-animation" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+                        <circle cx="50" cy="50" r="20" fill="none" stroke="green" stroke-width="4"></circle>
+                    </svg>
+                    <p>Visualizing magnetic fields around a wire.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <h2>Relativity</h2>
+        <div class="law">
+            <h3>Einstein's Mass-Energy Equivalence</h3>
+            <p>E = mc² (Energy equals mass times the speed of light squared)</p>
+            <div class="animation">
+                <div class="svg-container">
+                    <svg class="svg-animation" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+                        <circle cx="50" cy="50" r="30" fill="yellow" class="rotate"></circle>
+                    </svg>
+                    <p>Visualizing energy-mass relationship.</p>
+                </div>
+            </div>
+        </div>
+        <div class="law">
+            <h3>General Theory of Relativity</h3>
+            <p>Gravity is the curvature of spacetime caused by mass and energy.</p>
+            <div class="animation">
+                <div class="svg-container">
+                    <svg class="svg-animation" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+                        <ellipse cx="50" cy="50" rx="30" ry="10" fill="none" stroke="black" stroke-width="2"></ellipse>
+                    </svg>
+                    <p>Visualizing spacetime curvature.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <h2>Fluids</h2>
+        <div class="law">
+            <h3>Archimedes' Principle</h3>
+            <p>Buoyant force on an object is equal to the weight of the fluid displaced by the object.</p>
+            <div class="animation">
+                <div class="svg-container">
+                    <svg class="svg-animation" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+                        <rect x="40" y="40" width="20" height="20" fill="blue"></rect>
+                    </svg>
+                    <p>Visualizing buoyant force.</p>
+                </div>
+            </div>
+        </div>
+        <div class="law">
+            <h3>Bernoulli's Principle</h3>
+            <p>In a fluid flow, an increase in velocity occurs simultaneously with a decrease in pressure or potential energy.</p>
+            <div class="animation">
+                <div class="svg-container">
+                    <svg class="svg-animation" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+                        <path d="M10 50 Q 50 10, 90 50 T 170 50" fill="none" stroke="blue" stroke-width="2"></path>
+                    </svg>
+                    <p>Visualizing fluid flow and pressure.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <h2>Quantum Mechanics</h2>
+        <div class="law">
+            <h3>Planck's Law</h3>
+            <p>E = hf (Energy of a photon is proportional to its frequency.)</p>
+            <div class="animation">
+                <div class="svg-container">
+                    <svg class="svg-animation" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+                        <circle cx="50" cy="50" r="20" fill="red"></circle>
+                    </svg>
+                    <p>Visualizing photon energy.</p>
+                </div>
+            </div>
+        </div>
+        <div class="law">
+            <h3>Heisenberg's Uncertainty Principle</h3>
+            <p>ΔxΔp ≥ ħ/2 (The position and momentum of a particle cannot both be precisely determined at the same time.)</p>
+            <div class="animation">
+                <div class="svg-container">
+                    <svg class="svg-animation" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+                        <ellipse cx="50" cy="50" rx="30" ry="10" fill="none" stroke="black" stroke-width="2" class="oscillate"></ellipse>
+                    </svg>
+                    <p>Visualizing uncertainty.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.querySelectorAll('.law').forEach(law => {
+            law.addEventListener('click', () => {
+                law.classList.toggle('active');
+            });
+        });
+    </script>
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

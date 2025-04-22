@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<style>
+    .law p {
+        display: none;
+        margin-top: 0.5rem;
+        animation: fadeIn 0.5s ease-in-out;
+    }
+    .law.active p {
+        display: block;
+    }
+    @keyframes fadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(-10px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+    .animation {
+        margin-top: 1rem;
+        display: none;
+        text-align: center;
+    }
+    .law.active .animation {
+        display: block;
+        animation: zoomIn 0.5s ease-in-out;
+    }
+    @keyframes zoomIn {
+        from {
+            transform: scale(0.8);
+            opacity: 0;
+        }
+        to {
+            transform: scale(1);
+            opacity: 1;
+        }
+    }
+    .svg-container {
+        width: 200px;
+        height: 200px;
+        margin: 0 auto;
+    }
+    .svg-animation {
+        width: 100%;
+        height: 100%;
+    }
+    @keyframes rotate {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+    }
+    @keyframes oscillate {
+        0% { transform: translateX(0); }
+        50% { transform: translateX(50px); }
+        100% { transform: translateX(0); }
+    }
+    .rotate {
+        animation: rotate 4s linear infinite;
+    }
+    .oscillate {
+        animation: oscillate 2s ease-in-out infinite;
+    }
+</style>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Physics Laws and Equations</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f9;
+            color: #333;
+        }
+        header {
+            background-color: #6200ea;
+            color: white;
+            padding: 1rem;
+            text-align: center;
+        }
+        .container {
+            padding: 2rem;
+        }
+        .law {
+            background: white;
+            margin: 1rem 0;
+            padding: 1rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            cursor: pointer;
+        }
+        .law h2 {
+            margin: 0;
+        }
+        .law p {
+            display: none;
+            margin-top: 0.5rem;
+        }
+        .law.active p {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Interactive Physics Catalog</h1>
+    </header>
+    <div class="container">
+        <div class="law">
+            <h2>Newton's Second Law</h2>
+            <p>F = ma (Force equals mass times acceleration)</p>
+        </div>
+        <div class="law">
+            <h2>Ohm's Law</h2>
+            <p>V = IR (Voltage equals current times resistance)</p>
+        </div>
+        <div class="law">
+            <h2>Einstein's Mass-Energy Equivalence</h2>
+            <p>E = mc² (Energy equals mass times the speed of light squared)</p>
+        </div>
+        <div class="law">
+            <h2>Gravitational Force</h2>
+            <p>F = G(m₁m₂)/r² (Force equals gravitational constant times masses divided by distance squared)</p>
+        </div>
+        <div class="law">
+            <h2>Coulomb's Law</h2>
+            <p>F = k(q₁q₂)/r² (Electrostatic force between two charged particles)</p>
+        </div>
+        <div class="law">
+            <h2>First Law of Thermodynamics</h2>
+            <p>ΔU = Q - W (Change in internal energy equals heat added minus work done)</p>
+        </div>
+        <div class="law">
+            <h2>Wave Equation</h2>
+            <p>v = fλ (Wave velocity equals frequency times wavelength)</p>
+        </div>
+    </div>
+    <script>
+        document.querySelectorAll('.law').forEach(law => {
+            law.addEventListener('click', () => {
+                law.classList.toggle('active');
+            });
+        });
+    </script>
+</body>
+</html>
