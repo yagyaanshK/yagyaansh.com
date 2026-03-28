@@ -1,0 +1,3 @@
+[submodule "vibe_code/standard_model"]
+	path = vibe_code/standard_model
+	url = https://github.com/yagyaanshK/standard_model.git
