@@ -20,14 +20,14 @@
 
             // Adjust footer gradient colors and href styling based on theme
             const footer = document.querySelector('footer');
-            const exploreProjectsHeading = document.querySelector('.projects h2');
+            const exploreProjectsHeadings = document.querySelectorAll('.projects h2');
             const links = document.querySelectorAll('a');
             const listItems = document.querySelectorAll('.project-list li');
 
             if (newTheme.includes('main.css')) {
                 footer.style.background = 'linear-gradient(to bottom, #ffffff,#3e82ff)'; // Light theme colors
                 footer.style.color = 'white';
-                exploreProjectsHeading.style.color = 'black'; // Dark color for light theme
+                exploreProjectsHeadings.forEach(h2 => h2.style.color = 'black'); // Dark color for light theme
                 links.forEach(link => {
                     link.style.color = '#11264c';
                     link.style.textDecoration = 'underline';
@@ -42,7 +42,7 @@
             } else {
                 footer.style.background = 'linear-gradient(to bottom,#11264c, #3e82ff)'; // Dark theme colors
                 footer.style.color = 'white';
-                exploreProjectsHeading.style.color = 'white'; // White color for dark theme
+                exploreProjectsHeadings.forEach(h2 => h2.style.color = 'white'); // White color for dark theme
                 links.forEach(link => {
                     link.style.color = '#ffffff';
                     link.style.textDecoration = 'underline';
@@ -95,6 +95,14 @@
                     <li style="color: #ffffff;">• <a href="/standardmodel">Standard Model 3D Explorer</a></li>
                     <li style="color: #ffffff;">• <a href="/liquidglass">Liquid Glass Engine</a></li>
                     <li style="color: #ffffff;">• <a href="/reclip" style="display: inline-flex; align-items: center;">ReClip - Media Downloader <img src="https://raw.githubusercontent.com/yagyaanshK/reclip/hf-deploy/static/favicon.png" alt="ReClip Icon" style="height: 1.2rem; margin-left: 10px; border-radius: 6px;"></a></li>
+                </ul>
+            </section>
+            <section class="projects" style="margin-top: 40px;">
+                <h2 style="text-align: center; font-size: 2rem; color: white; margin-bottom: 20px;">Team Projects</h2>
+                <ul class="project-list" style="margin: 0 auto; text-align: left; width: fit-content; font-size: 1.5rem; list-style: none;">
+                    <li style="color: #ffffff;">• <a href="https://ideapoll.rjha.dev/" target="_blank">IdeaPoll</a></li>
+                    <li style="color: #ffffff;">• <a href="https://collegiate.rjha.dev/" target="_blank">Collegiate</a></li>
+                    <li style="color: #ffffff;">• <a href="https://play.google.com/store/apps/details?id=com.devsarc.alertojobs" target="_blank">Alert O Jobs</a></li>
                 </ul>
             </section>
         </main>
