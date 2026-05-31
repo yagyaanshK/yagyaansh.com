@@ -21,13 +21,15 @@
             // Adjust footer gradient colors and href styling based on theme
             const footer = document.querySelector('footer');
             const exploreProjectsHeadings = document.querySelectorAll('.projects h2');
+            const h1 = document.querySelector('h1');
             const links = document.querySelectorAll('a');
             const listItems = document.querySelectorAll('.project-list li');
 
             if (newTheme.includes('main.css')) {
                 footer.style.background = 'linear-gradient(to bottom, #ffffff,#3e82ff)'; // Light theme colors
                 footer.style.color = 'white';
-                exploreProjectsHeadings.forEach(h2 => h2.style.color = 'black'); // Dark color for light theme
+                if (h1) h1.style.color = '#72001b';
+                exploreProjectsHeadings.forEach(h2 => h2.style.color = '#72001b'); // Dark color for light theme
                 links.forEach(link => {
                     link.style.color = '#11264c';
                     link.style.textDecoration = 'underline';
@@ -42,6 +44,7 @@
             } else {
                 footer.style.background = 'linear-gradient(to bottom,#11264c, #3e82ff)'; // Dark theme colors
                 footer.style.color = 'white';
+                if (h1) h1.style.color = '#ffa75f';
                 exploreProjectsHeadings.forEach(h2 => h2.style.color = '#ffa75f'); // White color for dark theme
                 links.forEach(link => {
                     link.style.color = '#ffffff';
