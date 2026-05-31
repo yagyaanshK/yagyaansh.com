@@ -77,12 +77,39 @@
         .svg-container {
             width: 100%;
             max-width: 300px;
-            height: 150px;
             margin: 0 auto;
         }
         .svg-animation {
             width: 100%;
-            height: 100%;
+            height: auto;
+        }
+
+        /* Light Theme */
+        body.light-theme {
+            background-color: #ffffff;
+            color: #11264c;
+        }
+        body.light-theme h1, body.light-theme h2 {
+            color: #72001b;
+        }
+        body.light-theme .law {
+            background: rgba(0, 0, 0, 0.05);
+            border-color: rgba(0,0,0,0.1);
+        }
+        body.light-theme .law:hover {
+            background: rgba(0, 0, 0, 0.1);
+        }
+        body.light-theme .law h3 {
+            color: #11264c;
+        }
+        body.light-theme .law p {
+            color: #333333;
+        }
+        body.light-theme .animation {
+            background: rgba(0,0,0,0.05);
+        }
+        body.light-theme .back-link {
+            color: #72001b;
         }
 
         /* Animations */
@@ -187,6 +214,9 @@
     </style>
 </head>
 <body>
+    <nav style="display: flex; justify-content: flex-end; padding: 20px 20px 0;">
+        <button id="themeToggle" style="background: none; border: none; color: inherit; font-size: 1rem; cursor: pointer; text-decoration: underline dotted; font-family: inherit;">Switch Theme</button>
+    </nav>
     <header>
         <h1>Interactive Physics Catalog</h1>
     </header>
@@ -334,6 +364,10 @@
             law.addEventListener('click', () => {
                 law.classList.toggle('active');
             });
+        });
+
+        document.getElementById('themeToggle').addEventListener('click', () => {
+            document.body.classList.toggle('light-theme');
         });
     </script>
 </body>
