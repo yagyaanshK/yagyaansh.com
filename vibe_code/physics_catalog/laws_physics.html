@@ -3,372 +3,878 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Physics Laws and Equations</title>
+    <title>Interactive Physics Catalog</title>
+    <meta name="description" content="An interactive catalog of physics laws with typeset equations and live, parameter-driven simulations.">
     <link rel="icon" type="image/x-icon" href="../../assets/images/art.svg">
-    <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@300&display=swap" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Satisfy&display=swap" rel="stylesheet">  
-    <link href="https://fonts.googleapis.com/css2?family=Poppins&display=swap" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Quicksand&display=swap" rel="stylesheet">
+
+    <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@300;400&family=Poppins:wght@400;600&family=Quicksand:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- KaTeX for typeset equations (vendored locally — no external dependency) -->
+    <link rel="stylesheet" href="../../assets/vendor/katex/katex.min.css">
+    <script defer src="../../assets/vendor/katex/katex.min.js"></script>
+
     <style>
+        :root {
+            --bg: #0b1d40;
+            --bg-grad: radial-gradient(1200px 600px at 50% -10%, #18356e 0%, #0b1d40 60%);
+            --panel: #11264c;
+            --text: #e6edf8;
+            --muted: #9fb2d0;
+            --card: rgba(255, 255, 255, 0.05);
+            --card-bd: rgba(255, 255, 255, 0.12);
+            --card-hover: rgba(255, 255, 255, 0.10);
+            --head: #ffa75f;
+            --accent: #ffa75f;
+            --accent2: #ff5733;
+            --chip: rgba(255, 255, 255, 0.07);
+            --shadow: 0 18px 40px rgba(0, 0, 0, 0.45);
+        }
+        body.light-theme {
+            --bg: #eef3fb;
+            --bg-grad: radial-gradient(1200px 600px at 50% -10%, #ffffff 0%, #e6eefb 60%);
+            --panel: #ffffff;
+            --text: #16243f;
+            --muted: #5b6b86;
+            --card: #ffffff;
+            --card-bd: rgba(17, 38, 76, 0.12);
+            --card-hover: #f3f7ff;
+            --head: #72001b;
+            --accent: #72001b;
+            --accent2: #b5341f;
+            --chip: rgba(17, 38, 76, 0.05);
+            --shadow: 0 18px 40px rgba(17, 38, 76, 0.18);
+        }
+
+        * { box-sizing: border-box; }
+        html { scroll-behavior: smooth; }
         body {
             font-family: 'Quicksand', 'Poppins', sans-serif;
             margin: 0;
-            padding: 0;
-            background-color: #11264c;
-            color: #ffffff;
+            background: var(--bg);
+            background-image: var(--bg-grad);
+            background-attachment: fixed;
+            color: var(--text);
+            min-height: 100vh;
+            transition: background-color .3s ease, color .3s ease;
         }
-        header {
-            padding: 2rem 1rem;
+
+        /* ---------- Top bar ---------- */
+        .topbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 16px clamp(16px, 4vw, 40px);
+            gap: 16px;
+        }
+        .brand { font-size: .95rem; color: var(--muted); letter-spacing: .02em; }
+        .brand a { color: var(--muted); text-decoration: none; }
+        .brand a:hover { color: var(--accent); }
+        .ghost-btn {
+            background: var(--chip);
+            border: 1px solid var(--card-bd);
+            color: var(--text);
+            font-family: inherit;
+            font-size: .9rem;
+            padding: 8px 14px;
+            border-radius: 999px;
+            cursor: pointer;
+            transition: background .2s ease, transform .15s ease;
+        }
+        .ghost-btn:hover { background: var(--card-hover); transform: translateY(-1px); }
+
+        /* ---------- Hero ---------- */
+        header.hero {
             text-align: center;
+            padding: clamp(1rem, 4vw, 2.5rem) 1rem 1rem;
         }
-        h1 {
-            color: #ffa75f;
+        header.hero h1 {
+            color: var(--head);
             font-size: clamp(2rem, 5vw, 4rem);
             margin: 0;
+            font-weight: 400;
         }
-        h2 {
-            color: #ffa75f;
-            text-align: center;
-            font-size: clamp(1.5rem, 4vw, 2.5rem);
-            margin: 2rem 0 1rem;
-        }
-        .container {
-            max-width: 800px;
-            margin: 0 auto;
-            padding: 0 1rem;
-        }
-        .law {
-            background: rgba(255, 255, 255, 0.05);
-            margin: 1rem 0;
-            padding: 1.5rem;
-            border-radius: 12px;
-            cursor: pointer;
-            transition: background 0.3s ease;
-            border: 1px solid rgba(255,255,255,0.1);
-        }
-        .law:hover {
-            background: rgba(255, 255, 255, 0.1);
-        }
-        .law h3 {
-            margin: 0;
-            color: #ffffff;
-            font-size: 1.3rem;
-        }
-        .law p {
-            display: none;
-            margin-top: 1rem;
-            color: #e0e0e0;
+        header.hero p {
+            color: var(--muted);
+            max-width: 620px;
+            margin: .8rem auto 0;
+            font-size: clamp(.95rem, 2.5vw, 1.15rem);
             line-height: 1.5;
         }
-        .law.active p {
-            display: block;
+
+        /* ---------- Toolbar ---------- */
+        .toolbar {
+            position: sticky;
+            top: 0;
+            z-index: 20;
+            backdrop-filter: blur(10px);
+            background: color-mix(in srgb, var(--bg) 78%, transparent);
+            border-bottom: 1px solid var(--card-bd);
+            padding: 12px clamp(16px, 4vw, 40px);
+            margin-top: 1rem;
         }
-        .animation {
-            margin-top: 1.5rem;
-            display: none;
-            text-align: center;
-            background: rgba(0,0,0,0.2);
-            padding: 1rem;
-            border-radius: 8px;
-        }
-        .law.active .animation {
-            display: block;
-        }
-        .svg-container {
+        .toolbar-inner { max-width: 1100px; margin: 0 auto; display: flex; flex-direction: column; gap: 12px; }
+        .search-wrap { position: relative; }
+        .search-wrap svg { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); width: 18px; height: 18px; opacity: .55; }
+        #search {
             width: 100%;
-            max-width: 300px;
-            margin: 0 auto;
+            padding: 12px 16px 12px 42px;
+            border-radius: 12px;
+            border: 1px solid var(--card-bd);
+            background: var(--card);
+            color: var(--text);
+            font-family: inherit;
+            font-size: 1rem;
+            outline: none;
+            transition: border-color .2s ease;
         }
-        .svg-animation {
-            width: 100%;
-            height: auto;
+        #search:focus { border-color: var(--accent); }
+        .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+        .chip {
+            border: 1px solid var(--card-bd);
+            background: var(--chip);
+            color: var(--text);
+            font-family: inherit;
+            font-size: .85rem;
+            padding: 6px 14px;
+            border-radius: 999px;
+            cursor: pointer;
+            transition: all .18s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+        }
+        .chip .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--c, var(--accent)); }
+        .chip:hover { background: var(--card-hover); }
+        .chip.active { background: var(--c, var(--accent)); border-color: transparent; color: #0b1d40; font-weight: 600; }
+        .chip.active .dot { background: rgba(11,29,64,.55); }
+
+        /* ---------- Grid ---------- */
+        main { max-width: 1100px; margin: 0 auto; padding: 28px clamp(16px, 4vw, 40px) 80px; }
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+            gap: 18px;
+        }
+        .card {
+            position: relative;
+            text-align: left;
+            background: var(--card);
+            border: 1px solid var(--card-bd);
+            border-radius: 16px;
+            padding: 20px 18px 18px;
+            cursor: pointer;
+            font-family: inherit;
+            color: var(--text);
+            overflow: hidden;
+            transition: transform .18s ease, box-shadow .18s ease, background .18s ease;
+        }
+        .card::before {
+            content: "";
+            position: absolute; left: 0; top: 0; bottom: 0; width: 4px;
+            background: var(--c);
+        }
+        .card:hover { transform: translateY(-4px); box-shadow: var(--shadow); background: var(--card-hover); }
+        .card:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+        .card .row { display: flex; align-items: center; gap: 10px; }
+        .card .icon { font-size: 1.5rem; line-height: 1; }
+        .card .badge {
+            font-size: .68rem;
+            text-transform: uppercase;
+            letter-spacing: .06em;
+            color: var(--c);
+            font-weight: 600;
+        }
+        .card h3 { margin: 12px 0 10px; font-size: 1.12rem; color: var(--text); font-weight: 600; }
+        .card .eq { color: var(--muted); font-size: 1.05rem; min-height: 1.6em; }
+        .card .eq .katex { color: var(--text); }
+        .card .hint { margin-top: 12px; font-size: .78rem; color: var(--muted); display: flex; align-items: center; gap: 6px; }
+        .card .hint svg { width: 13px; height: 13px; }
+
+        .empty { text-align: center; color: var(--muted); padding: 40px 0; display: none; }
+
+        /* ---------- Modal ---------- */
+        .overlay {
+            position: fixed; inset: 0; z-index: 50;
+            background: rgba(4, 12, 28, 0.6);
+            backdrop-filter: blur(6px);
+            display: flex; align-items: center; justify-content: center;
+            padding: 16px;
+            opacity: 0; pointer-events: none;
+            transition: opacity .2s ease;
+        }
+        .overlay.open { opacity: 1; pointer-events: auto; }
+        .modal {
+            position: relative;
+            width: min(560px, 100%);
+            max-height: 92vh;
+            overflow-y: auto;
+            background: var(--panel);
+            border: 1px solid var(--card-bd);
+            border-radius: 20px;
+            box-shadow: var(--shadow);
+            padding: 26px clamp(18px, 4vw, 30px) 28px;
+            transform: translateY(12px) scale(.98);
+            transition: transform .22s ease;
+        }
+        .overlay.open .modal { transform: none; }
+        .modal .close {
+            position: absolute; top: 14px; right: 14px;
+            width: 36px; height: 36px; border-radius: 50%;
+            border: 1px solid var(--card-bd); background: var(--chip);
+            color: var(--text); font-size: 1.3rem; line-height: 1; cursor: pointer;
+            transition: background .18s ease;
+        }
+        .modal .close:hover { background: var(--card-hover); }
+        .m-cat { font-size: .72rem; text-transform: uppercase; letter-spacing: .08em; font-weight: 700; color: var(--mc); }
+        .m-title { margin: 6px 0 4px; font-size: clamp(1.4rem, 4vw, 1.9rem); color: var(--head); }
+        .m-eq { margin: 14px 0; font-size: 1.3rem; text-align: center; padding: 14px; background: var(--card); border-radius: 12px; overflow-x: auto; }
+        .m-desc { color: var(--text); line-height: 1.55; font-size: .98rem; margin: 0 0 16px; }
+        .m-legend { display: flex; flex-direction: column; gap: 6px; margin-bottom: 20px; }
+        .m-legend .lg { display: flex; align-items: baseline; gap: 10px; font-size: .9rem; color: var(--muted); }
+        .m-legend .sym { color: var(--mc); font-weight: 700; min-width: 34px; font-family: 'Poppins', serif; }
+        .m-legend .unit { margin-left: auto; font-size: .8rem; opacity: .8; }
+
+        .sim { border-top: 1px solid var(--card-bd); padding-top: 18px; }
+        .sim-head { font-size: .72rem; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin-bottom: 12px; }
+        canvas#sim { width: 100%; max-width: 420px; aspect-ratio: 320 / 190; display: block; margin: 0 auto 14px; background: var(--card); border-radius: 12px; }
+        .m-readout { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-bottom: 16px; }
+        .pill {
+            background: var(--chip); border: 1px solid var(--card-bd);
+            border-radius: 999px; padding: 6px 14px; font-size: .9rem; color: var(--text);
+        }
+        .pill b { color: var(--mc); font-weight: 700; }
+        .m-controls { display: flex; flex-direction: column; gap: 14px; }
+        .ctrl label { display: flex; justify-content: space-between; font-size: .85rem; color: var(--muted); margin-bottom: 6px; }
+        .ctrl label .val { color: var(--text); font-weight: 600; }
+        input[type=range] {
+            -webkit-appearance: none; appearance: none;
+            width: 100%; height: 6px; border-radius: 999px;
+            background: var(--card-bd); outline: none; cursor: pointer;
+        }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none; appearance: none;
+            width: 18px; height: 18px; border-radius: 50%;
+            background: var(--mc); border: 2px solid var(--panel); cursor: pointer;
+            box-shadow: 0 2px 6px rgba(0,0,0,.3);
+        }
+        input[type=range]::-moz-range-thumb {
+            width: 18px; height: 18px; border-radius: 50%;
+            background: var(--mc); border: 2px solid var(--panel); cursor: pointer;
         }
 
-        /* Light Theme */
-        body.light-theme {
-            background-color: #ffffff;
-            color: #11264c;
-        }
-        body.light-theme h1, body.light-theme h2 {
-            color: #72001b;
-        }
-        body.light-theme .law {
-            background: rgba(0, 0, 0, 0.05);
-            border-color: rgba(0,0,0,0.1);
-        }
-        body.light-theme .law:hover {
-            background: rgba(0, 0, 0, 0.1);
-        }
-        body.light-theme .law h3 {
-            color: #11264c;
-        }
-        body.light-theme .law p {
-            color: #333333;
-        }
-        body.light-theme .animation {
-            background: rgba(0,0,0,0.05);
-        }
-        body.light-theme .back-link {
-            color: #72001b;
-        }
+        footer { text-align: center; color: var(--muted); padding: 30px 16px 40px; font-size: .85rem; }
+        footer a { color: var(--accent); }
 
-        /* Animations */
-        @keyframes uniformMotion {
-            0% { transform: translateX(-20px); }
-            100% { transform: translateX(280px); }
+        @media (max-width: 480px) {
+            .card h3 { font-size: 1.05rem; }
         }
-        .anim-uniform { animation: uniformMotion 3s linear infinite; }
-
-        @keyframes accelMotion {
-            0% { transform: translateX(-20px); }
-            100% { transform: translateX(280px); }
-        }
-        .anim-accel { animation: accelMotion 2s ease-in infinite; }
-
-        @keyframes actionReactLeft {
-            0%, 100% { transform: translateX(40px); }
-            50% { transform: translateX(120px); }
-        }
-        @keyframes actionReactRight {
-            0%, 100% { transform: translateX(260px); }
-            50% { transform: translateX(180px); }
-        }
-        .anim-col-left { animation: actionReactLeft 2s cubic-bezier(0.2, 0.8, 0.2, 1) infinite; }
-        .anim-col-right { animation: actionReactRight 2s cubic-bezier(0.2, 0.8, 0.2, 1) infinite; }
-
-        @keyframes flowCurrent {
-            0% { stroke-dashoffset: 20; }
-            100% { stroke-dashoffset: 0; }
-        }
-        .anim-current { 
-            stroke-dasharray: 5 5; 
-            animation: flowCurrent 0.5s linear infinite; 
-        }
-
-        @keyframes attractLeft {
-            0%, 100% { transform: translateX(20px); }
-            50% { transform: translateX(120px); }
-        }
-        @keyframes attractRight {
-            0%, 100% { transform: translateX(280px); }
-            50% { transform: translateX(180px); }
-        }
-        .anim-attract-left { animation: attractLeft 3s ease-in-out infinite; }
-        .anim-attract-right { animation: attractRight 3s ease-in-out infinite; }
-
-        @keyframes spin { 100% { transform: rotate(360deg); } }
-        .anim-spin { animation: spin 2s linear infinite; transform-origin: 150px 75px; }
-        
-        @keyframes fieldExpand {
-            0% { r: 5; opacity: 1; }
-            100% { r: 50; opacity: 0; }
-        }
-        .anim-field { animation: fieldExpand 2s ease-out infinite; transform-origin: center; }
-
-        @keyframes radiate {
-            0% { r: 10; opacity: 1; }
-            100% { r: 100; opacity: 0; }
-        }
-        .anim-radiate { animation: radiate 1.5s ease-out infinite; transform-origin: center; }
-
-        @keyframes orbit {
-            from { transform: rotate(0deg) translateX(60px) rotate(0deg); }
-            to { transform: rotate(360deg) translateX(60px) rotate(-360deg); }
-        }
-        .anim-orbit { animation: orbit 4s linear infinite; transform-origin: 150px 75px; }
-        
-        @keyframes sink {
-            0% { transform: translateY(0); }
-            50%, 100% { transform: translateY(50px); }
-        }
-        @keyframes rise {
-            0% { transform: translateY(0); }
-            50%, 100% { transform: translateY(-10px); }
-        }
-        .anim-sink { animation: sink 3s ease-in-out infinite; }
-        .anim-rise { animation: rise 3s ease-in-out infinite; }
-
-        @keyframes waveMove {
-            0% { transform: translateX(0); }
-            100% { transform: translateX(-50px); }
-        }
-        .anim-wave { animation: waveMove 1s linear infinite; }
-
-        @keyframes uncertainty {
-            0%, 100% { rx: 10; ry: 10; opacity: 1; }
-            50% { rx: 40; ry: 20; opacity: 0.3; }
-        }
-        .anim-uncertain { animation: uncertainty 2s ease-in-out infinite; transform-origin: 150px 75px; }
-
-        .back-link {
-            display: block;
-            text-align: center;
-            margin-top: 3rem;
-            margin-bottom: 2rem;
-            color: #ffa75f;
-            text-decoration: underline;
-        }
-        .back-link:hover {
-            color: #ff5733;
+        @media (prefers-reduced-motion: reduce) {
+            * { scroll-behavior: auto; }
         }
     </style>
 </head>
 <body>
-    <nav style="display: flex; justify-content: flex-end; padding: 20px 20px 0;">
-        <button id="themeToggle" style="background: none; border: none; color: inherit; font-size: 1rem; cursor: pointer; text-decoration: underline dotted; font-family: inherit;">Switch Theme</button>
-    </nav>
-    <header>
+    <div class="topbar">
+        <div class="brand"><a href="../vibe_index.html">&larr; Vibe Code</a> &nbsp;/&nbsp; Physics Catalog</div>
+        <button class="ghost-btn" id="themeToggle">◐ Theme</button>
+    </div>
+
+    <header class="hero">
         <h1>Interactive Physics Catalog</h1>
+        <p>Browse the fundamental laws — every equation is typeset, and every card opens a live simulation you can drive with the sliders.</p>
     </header>
 
-    <div class="container">
-        <h2>Kinematics</h2>
-        <div class="law">
-            <h3>Newton's First Law</h3>
-            <p>An object remains at rest or in uniform motion unless acted upon by an external force.</p>
-            <div class="animation">
-                <div class="svg-container">
-                    <svg class="svg-animation" viewBox="0 0 300 150">
-                        <line x1="0" y1="100" x2="300" y2="100" stroke="rgba(255,255,255,0.3)" stroke-width="2"/>
-                        <circle cx="0" cy="90" r="10" fill="#ffa75f" class="anim-uniform"/>
-                    </svg>
-                    <p>Visualizing constant velocity (zero net force).</p>
-                </div>
+    <div class="toolbar">
+        <div class="toolbar-inner">
+            <div class="search-wrap">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                <input id="search" type="search" placeholder="Search laws, equations, concepts…" autocomplete="off">
             </div>
+            <div class="chips" id="chips"></div>
         </div>
-        <div class="law">
-            <h3>Newton's Second Law</h3>
-            <p>F = ma (Force equals mass times acceleration)</p>
-            <div class="animation">
-                <div class="svg-container">
-                    <svg class="svg-animation" viewBox="0 0 300 150">
-                        <line x1="0" y1="100" x2="300" y2="100" stroke="rgba(255,255,255,0.3)" stroke-width="2"/>
-                        <circle cx="0" cy="90" r="10" fill="#ff5733" class="anim-accel"/>
-                    </svg>
-                    <p>Visualizing acceleration under a constant force.</p>
-                </div>
-            </div>
-        </div>
-        <div class="law">
-            <h3>Newton's Third Law</h3>
-            <p>For every action, there is an equal and opposite reaction.</p>
-            <div class="animation">
-                <div class="svg-container">
-                    <svg class="svg-animation" viewBox="0 0 300 150">
-                        <circle cx="0" cy="75" r="15" fill="#3e82ff" class="anim-col-left"/>
-                        <circle cx="0" cy="75" r="15" fill="#ffa75f" class="anim-col-right"/>
-                    </svg>
-                    <p>Visualizing action and reaction forces in a collision.</p>
-                </div>
-            </div>
-        </div>
+    </div>
 
-        <h2>Electrodynamics</h2>
-        <div class="law">
-            <h3>Ohm's Law</h3>
-            <p>V = IR (Voltage equals current times resistance)</p>
-            <div class="animation">
-                <div class="svg-container">
-                    <svg class="svg-animation" viewBox="0 0 300 150">
-                        <rect x="50" y="50" width="200" height="50" fill="none" stroke="#ffa75f" stroke-width="4" rx="10"/>
-                        <path d="M 50 50 L 250 50 L 250 100 L 50 100 Z" fill="none" stroke="#fff" stroke-width="2" class="anim-current"/>
-                        <rect x="120" y="40" width="60" height="20" fill="#11264c" stroke="#fff"/>
-                        <text x="150" y="54" fill="#fff" font-size="12" text-anchor="middle">Resistor</text>
-                    </svg>
-                    <p>Visualizing current flow through a circuit.</p>
-                </div>
-            </div>
-        </div>
-        <div class="law">
-            <h3>Coulomb's Law</h3>
-            <p>F = k(q₁q₂)/r² (Electrostatic force between charged particles)</p>
-            <div class="animation">
-                <div class="svg-container">
-                    <svg class="svg-animation" viewBox="0 0 300 150">
-                        <circle cx="0" cy="75" r="15" fill="#ff5733" class="anim-attract-left"/>
-                        <text x="0" y="80" fill="#fff" font-size="16" text-anchor="middle" class="anim-attract-left">+</text>
-                        
-                        <circle cx="0" cy="75" r="15" fill="#3e82ff" class="anim-attract-right"/>
-                        <text x="0" y="80" fill="#fff" font-size="16" text-anchor="middle" class="anim-attract-right">-</text>
-                    </svg>
-                    <p>Visualizing electrostatic attraction between opposite charges.</p>
-                </div>
-            </div>
-        </div>
+    <main>
+        <div class="grid" id="grid"></div>
+        <div class="empty" id="empty">No laws match your search.</div>
+    </main>
 
-        <h2>Relativity</h2>
-        <div class="law">
-            <h3>Einstein's Mass-Energy Equivalence</h3>
-            <p>E = mc² (Energy equals mass times the speed of light squared)</p>
-            <div class="animation">
-                <div class="svg-container">
-                    <svg class="svg-animation" viewBox="0 0 300 150">
-                        <circle cx="150" cy="75" r="10" fill="#ff5733"/>
-                        <circle cx="150" cy="75" r="10" fill="none" stroke="#ffa75f" stroke-width="2" class="anim-radiate"/>
-                        <circle cx="150" cy="75" r="10" fill="none" stroke="#ffa75f" stroke-width="2" class="anim-radiate" style="animation-delay: 0.5s;"/>
-                        <circle cx="150" cy="75" r="10" fill="none" stroke="#ffa75f" stroke-width="2" class="anim-radiate" style="animation-delay: 1.0s;"/>
-                    </svg>
-                    <p>Visualizing energy radiating from mass.</p>
-                </div>
-            </div>
-        </div>
-        <div class="law">
-            <h3>General Theory of Relativity</h3>
-            <p>Gravity is the curvature of spacetime caused by mass and energy.</p>
-            <div class="animation">
-                <div class="svg-container">
-                    <svg class="svg-animation" viewBox="0 0 300 150">
-                        <circle cx="150" cy="75" r="30" fill="#ff5733"/>
-                        <circle cx="150" cy="75" r="8" fill="#3e82ff" class="anim-orbit"/>
-                    </svg>
-                    <p>Visualizing a mass orbiting in curved spacetime.</p>
-                </div>
-            </div>
-        </div>
+    <footer>
+        Built for <a href="../vibe_index.html">Just Vibing</a> · Equations rendered with KaTeX
+    </footer>
 
-        <h2>Fluids</h2>
-        <div class="law">
-            <h3>Archimedes' Principle</h3>
-            <p>Buoyant force on an object is equal to the weight of the fluid displaced by the object.</p>
-            <div class="animation">
-                <div class="svg-container">
-                    <svg class="svg-animation" viewBox="0 0 300 150">
-                        <rect x="100" y="80" width="100" height="70" fill="rgba(62, 130, 255, 0.4)"/>
-                        <line x1="100" y1="80" x2="200" y2="80" stroke="#3e82ff" stroke-width="2" class="anim-rise"/>
-                        <rect x="135" y="30" width="30" height="30" fill="#ffa75f" class="anim-sink"/>
-                    </svg>
-                    <p>Visualizing an object sinking and displacing water.</p>
-                </div>
+    <!-- Modal -->
+    <div class="overlay" id="overlay" aria-hidden="true">
+        <div class="modal" role="dialog" aria-modal="true" aria-labelledby="m-title">
+            <button class="close" id="closeBtn" aria-label="Close">&times;</button>
+            <div class="m-cat" id="m-cat"></div>
+            <h2 class="m-title" id="m-title"></h2>
+            <div class="m-eq" id="m-eq"></div>
+            <p class="m-desc" id="m-desc"></p>
+            <div class="m-legend" id="m-legend"></div>
+            <div class="sim">
+                <div class="sim-head">Live simulation</div>
+                <canvas id="sim" width="320" height="190"></canvas>
+                <div class="m-readout" id="m-readout"></div>
+                <div class="m-controls" id="m-controls"></div>
             </div>
         </div>
-
-        <h2>Quantum Mechanics</h2>
-        <div class="law">
-            <h3>Heisenberg's Uncertainty Principle</h3>
-            <p>ΔxΔp ≥ ħ/2 (The position and momentum of a particle cannot both be precisely determined at the same time.)</p>
-            <div class="animation">
-                <div class="svg-container">
-                    <svg class="svg-animation" viewBox="0 0 300 150">
-                        <ellipse cx="150" cy="75" rx="10" ry="10" fill="#3e82ff" class="anim-uncertain"/>
-                    </svg>
-                    <p>Visualizing the fuzzy probability cloud of a particle's position.</p>
-                </div>
-            </div>
-        </div>
-
-        <a href="../vibe_index.html" class="back-link">Back to Projects</a>
     </div>
 
     <script>
-        document.querySelectorAll('.law').forEach(law => {
-            law.addEventListener('click', () => {
-                law.classList.toggle('active');
+    "use strict";
+    // ---------- constants ----------
+    const C = 299792458, G = 6.674e-11, KE = 8.9875e9, H = 6.626e-34, HBAR = 1.0546e-34, G0 = 9.8, QE = 1.602e-19;
+    const LW = 320, LH = 190, TAU = Math.PI * 2;
+
+    const CAT_COLORS = {
+        'Mechanics': '#ffa75f',
+        'Electromagnetism': '#3e82ff',
+        'Waves & Optics': '#2ec4a6',
+        'Relativity': '#b07bff',
+        'Quantum': '#ff6f9c',
+        'Fluids': '#38b6ff'
+    };
+
+    // ---------- number formatting ----------
+    function fmt(v) {
+        if (v === null || v === undefined) return '';
+        if (!isFinite(v)) return '∞';
+        if (v === 0) return '0';
+        const a = Math.abs(v);
+        if (a >= 1e5 || a < 1e-3) return v.toExponential(2).replace('e', '×10^').replace('+', '');
+        if (a >= 100) return v.toFixed(0);
+        if (a >= 1) return v.toFixed(2);
+        return v.toFixed(3);
+    }
+
+    // ---------- canvas palette + helpers ----------
+    function pal() {
+        const light = document.body.classList.contains('light-theme');
+        return {
+            track: light ? 'rgba(17,38,76,0.28)' : 'rgba(255,255,255,0.30)',
+            grid: light ? 'rgba(17,38,76,0.10)' : 'rgba(255,255,255,0.10)',
+            text: light ? '#16243f' : '#dce6f5'
+        };
+    }
+    function ball(ctx, x, y, r, c) { ctx.fillStyle = c; ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); ctx.fill(); }
+    function trackH(ctx, y, P) { ctx.strokeStyle = P.track; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(LW, y); ctx.stroke(); ctx.lineWidth = 1; }
+    function periPoint(x1, y1, x2, y2, d) {
+        const w = x2 - x1, h = y2 - y1, peri = 2 * (w + h);
+        d = ((d % peri) + peri) % peri;
+        if (d < w) return { x: x1 + d, y: y1 }; d -= w;
+        if (d < h) return { x: x2, y: y1 + d }; d -= h;
+        if (d < w) return { x: x2 - d, y: y2 }; d -= w;
+        return { x: x1, y: y2 - d };
+    }
+    function drawCharge(ctx, x, y, q) {
+        const c = q > 0 ? '#ff5733' : (q < 0 ? '#3e82ff' : '#888');
+        ball(ctx, x, y, 15, c);
+        ctx.fillStyle = '#fff'; ctx.font = 'bold 18px Quicksand';
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText(q > 0 ? '+' : (q < 0 ? '−' : '0'), x, y + 1);
+        ctx.textBaseline = 'alphabetic';
+    }
+    function clockFace(ctx, cx, cy, phase, P, c, label) {
+        ctx.strokeStyle = P.track; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(cx, cy, 30, 0, TAU); ctx.stroke();
+        const a = phase * 2 - Math.PI / 2;
+        ctx.strokeStyle = c; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(cx, cy);
+        ctx.lineTo(cx + 22 * Math.cos(a), cy + 22 * Math.sin(a)); ctx.stroke(); ctx.lineWidth = 1;
+        ball(ctx, cx, cy, 3, c);
+        ctx.fillStyle = P.text; ctx.font = '13px Quicksand'; ctx.textAlign = 'center';
+        ctx.fillText(label, cx, cy + 50);
+    }
+    function gauss(ctx, cx, base, w, c, label, P) {
+        w = Math.max(6, Math.min(46, w));
+        ctx.strokeStyle = c; ctx.lineWidth = 2.5; ctx.beginPath();
+        for (let i = -70; i <= 70; i += 2) {
+            const x = cx + i, y = base - 70 * Math.exp(-(i * i) / (2 * w * w));
+            i === -70 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+        }
+        ctx.stroke(); ctx.lineWidth = 1;
+        ctx.fillStyle = P.text; ctx.font = '13px Quicksand'; ctx.textAlign = 'center';
+        ctx.fillText(label, cx, base + 18);
+    }
+    function specColor(wl) {
+        let r, g, b;
+        if (wl < 440) { r = -(wl - 440) / 60; g = 0; b = 1; }
+        else if (wl < 490) { r = 0; g = (wl - 440) / 50; b = 1; }
+        else if (wl < 510) { r = 0; g = 1; b = -(wl - 510) / 20; }
+        else if (wl < 580) { r = (wl - 510) / 70; g = 1; b = 0; }
+        else if (wl < 645) { r = 1; g = -(wl - 645) / 65; b = 0; }
+        else { r = 1; g = 0; b = 0; }
+        return `rgb(${r * 255 | 0},${g * 255 | 0},${b * 255 | 0})`;
+    }
+
+    // ---------- the catalog ----------
+    const LAWS = [
+        {
+            id: 'n1', cat: 'Mechanics', title: "Newton's First Law", icon: '🛹',
+            latex: '\\sum \\vec{F}=0 \\;\\Rightarrow\\; \\vec{v}=\\text{const}',
+            desc: 'An object stays at rest or keeps moving at constant velocity unless acted on by a net external force — the principle of inertia.',
+            vars: [['F', 'net force', 'N'], ['v', 'velocity', 'm/s']],
+            controls: [{ k: 'v', label: 'Velocity', min: 1, max: 10, step: 0.5, val: 4, unit: 'm/s' }],
+            readout: p => [{ l: 'Net force', v: 0, u: 'N' }, { l: 'Velocity', v: p.v, u: 'm/s' }],
+            draw(ctx, p, t, P, col) { trackH(ctx, 140, P); const x = ((p.v * 33 * t) % (LW + 40)) - 20; ball(ctx, x, 128, 11, col); }
+        },
+        {
+            id: 'n2', cat: 'Mechanics', title: "Newton's Second Law", icon: '⚙️',
+            latex: '\\vec{F}=m\\vec{a}',
+            desc: 'A body’s acceleration is proportional to the net force and inversely proportional to its mass.',
+            vars: [['F', 'net force', 'N'], ['m', 'mass', 'kg'], ['a', 'acceleration', 'm/s²']],
+            controls: [
+                { k: 'F', label: 'Force', min: 1, max: 50, step: 1, val: 20, unit: 'N' },
+                { k: 'm', label: 'Mass', min: 1, max: 10, step: 0.5, val: 5, unit: 'kg' }
+            ],
+            readout: p => [{ l: 'Acceleration', v: p.F / p.m, u: 'm/s²' }],
+            draw(ctx, p, t, P, col) {
+                trackH(ctx, 140, P);
+                const a = p.F / p.m, s = 7, D = 330;
+                const tc = Math.sqrt(2 * D / (a * s)) || 2;
+                const tt = t % tc, x = -15 + 0.5 * a * s * tt * tt;
+                ball(ctx, x, 128, 12, col);
+            }
+        },
+        {
+            id: 'n3', cat: 'Mechanics', title: "Newton's Third Law", icon: '💥',
+            latex: '\\vec{F}_{AB}=-\\vec{F}_{BA}',
+            desc: 'For every action there is an equal and opposite reaction. When two bodies push apart, total momentum is conserved.',
+            vars: [['mₐ', 'mass A', 'kg'], ['m_b', 'mass B', 'kg']],
+            controls: [
+                { k: 'mA', label: 'Mass A', min: 1, max: 8, step: 0.5, val: 2, unit: 'kg' },
+                { k: 'mB', label: 'Mass B', min: 1, max: 8, step: 0.5, val: 4, unit: 'kg' }
+            ],
+            readout: p => [{ l: 'Speed ratio vₐ : v_b', v: p.mB / p.mA, u: '' }],
+            draw(ctx, p, t, P, col) {
+                const cx = LW / 2, cy = 120, tot = p.mA + p.mB;
+                const vA = p.mB / tot, vB = p.mA / tot, tt = t % 2.4, d = tt * 120;
+                trackH(ctx, 150, P);
+                const rA = 9 + p.mA * 2.4, rB = 9 + p.mB * 2.4;
+                ball(ctx, cx - rA - d * vA, cy, rA, '#3e82ff');
+                ball(ctx, cx + rB + d * vB, cy, rB, col);
+            }
+        },
+        {
+            id: 'proj', cat: 'Mechanics', title: 'Projectile Motion', icon: '🎯',
+            latex: 'R=\\dfrac{v_0^{2}\\,\\sin 2\\theta}{g}',
+            desc: 'A body launched at an angle traces a parabola under gravity. Range peaks at 45°.',
+            vars: [['v₀', 'launch speed', 'm/s'], ['θ', 'angle', '°'], ['R', 'range', 'm'], ['H', 'max height', 'm']],
+            controls: [
+                { k: 'v', label: 'Speed', min: 5, max: 30, step: 1, val: 20, unit: 'm/s' },
+                { k: 'th', label: 'Angle', min: 10, max: 85, step: 1, val: 45, unit: '°' }
+            ],
+            readout: p => {
+                const r = p.th * Math.PI / 180;
+                return [
+                    { l: 'Range', v: p.v * p.v * Math.sin(2 * r) / G0, u: 'm' },
+                    { l: 'Max height', v: p.v * p.v * Math.sin(r) ** 2 / (2 * G0), u: 'm' }
+                ];
+            },
+            draw(ctx, p, t, P, col) {
+                const r = p.th * Math.PI / 180, T = 2 * p.v * Math.sin(r) / G0, sc = 2.6, floor = 162;
+                trackH(ctx, floor, P);
+                ctx.strokeStyle = col; ctx.globalAlpha = 0.4; ctx.beginPath();
+                for (let i = 0; i <= 40; i++) {
+                    const tt = T * i / 40, x = 12 + p.v * Math.cos(r) * tt * sc,
+                        y = floor - (p.v * Math.sin(r) * tt - 0.5 * G0 * tt * tt) * sc;
+                    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+                }
+                ctx.stroke(); ctx.globalAlpha = 1;
+                const tt = t % (T + 0.4), x = 12 + p.v * Math.cos(r) * tt * sc,
+                    y = Math.min(floor, floor - (p.v * Math.sin(r) * tt - 0.5 * G0 * tt * tt) * sc);
+                ball(ctx, x, y, 7, col);
+            }
+        },
+        {
+            id: 'hooke', cat: 'Mechanics', title: "Hooke's Law", icon: '🌀',
+            latex: 'F=-kx',
+            desc: 'A spring’s restoring force is proportional to how far it is stretched or compressed from equilibrium.',
+            vars: [['k', 'stiffness', 'N/m'], ['x', 'displacement', 'm'], ['F', 'restoring force', 'N']],
+            controls: [
+                { k: 'k', label: 'Stiffness k', min: 1, max: 20, step: 1, val: 8, unit: 'N/m' },
+                { k: 'A', label: 'Amplitude', min: 0.1, max: 0.5, step: 0.05, val: 0.3, unit: 'm' }
+            ],
+            readout: p => [
+                { l: 'Max force', v: p.k * p.A, u: 'N' },
+                { l: 'Frequency', v: Math.sqrt(p.k) / TAU, u: 'Hz' }
+            ],
+            draw(ctx, p, t, P, col) {
+                const w = Math.sqrt(p.k), x0 = 36, mid = 150, y = 110;
+                const mx = mid + p.A * 110 * Math.cos(w * t);
+                ctx.fillStyle = P.track; ctx.fillRect(x0 - 8, y - 32, 8, 64);
+                ctx.strokeStyle = col; ctx.lineWidth = 2.5; ctx.beginPath();
+                for (let i = 0; i <= 60; i++) {
+                    const f = i / 60, xx = x0 + f * (mx - x0), yy = y + Math.sin(f * 12 * Math.PI) * 11;
+                    i === 0 ? ctx.moveTo(xx, yy) : ctx.lineTo(xx, yy);
+                }
+                ctx.stroke(); ctx.lineWidth = 1;
+                ctx.fillStyle = col; ctx.fillRect(mx, y - 17, 30, 34);
+            }
+        },
+        {
+            id: 'pend', cat: 'Mechanics', title: 'Simple Pendulum', icon: '⏱️',
+            latex: 'T=2\\pi\\sqrt{\\dfrac{L}{g}}',
+            desc: 'For small swings, a pendulum’s period depends only on its length and gravity — not on mass or amplitude.',
+            vars: [['L', 'length', 'm'], ['g', 'gravity', 'm/s²'], ['T', 'period', 's']],
+            controls: [{ k: 'L', label: 'Length', min: 0.2, max: 3, step: 0.1, val: 1, unit: 'm' }],
+            readout: p => [{ l: 'Period', v: TAU * Math.sqrt(p.L / G0), u: 's' }],
+            draw(ctx, p, t, P, col) {
+                const T = TAU * Math.sqrt(p.L / G0), px = LW / 2, py = 28, len = 25 + p.L * 42;
+                const th = 0.5 * Math.cos(TAU * t / T), bx = px + len * Math.sin(th), by = py + len * Math.cos(th);
+                ctx.strokeStyle = P.track; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(px - 30, py); ctx.lineTo(px + 30, py); ctx.stroke();
+                ctx.strokeStyle = col; ctx.beginPath(); ctx.moveTo(px, py); ctx.lineTo(bx, by); ctx.stroke(); ctx.lineWidth = 1;
+                ball(ctx, bx, by, 12, col);
+            }
+        },
+        {
+            id: 'grav', cat: 'Mechanics', title: 'Universal Gravitation', icon: '🪐',
+            latex: 'F=G\\dfrac{m_1 m_2}{r^{2}}',
+            desc: 'Every mass attracts every other mass — proportional to the product of the masses and inversely to the square of the distance.',
+            vars: [['m₁', 'mass 1', '×10²⁴ kg'], ['m₂', 'mass 2', '×10²⁴ kg'], ['r', 'distance', '×10⁷ m']],
+            controls: [
+                { k: 'm1', label: 'Mass 1', min: 1, max: 100, step: 1, val: 60, unit: '·10²⁴kg' },
+                { k: 'm2', label: 'Mass 2', min: 0.1, max: 10, step: 0.1, val: 1, unit: '·10²⁴kg' },
+                { k: 'r', label: 'Distance', min: 1, max: 10, step: 0.5, val: 4, unit: '·10⁷m' }
+            ],
+            readout: p => [{ l: 'Force', v: G * (p.m1 * 1e24) * (p.m2 * 1e24) / ((p.r * 1e7) ** 2), u: 'N' }],
+            draw(ctx, p, t, P, col) {
+                const cx = LW / 2, cy = 95, R = 22 + p.r * 8, ang = t * 1.2;
+                const ox = cx + R * Math.cos(ang), oy = cy + R * 0.5 * Math.sin(ang);
+                ctx.strokeStyle = P.grid; ctx.beginPath(); ctx.ellipse(cx, cy, R, R * 0.5, 0, 0, TAU); ctx.stroke();
+                ball(ctx, cx, cy, 10 + p.m1 * 0.11, '#ff5733');
+                ball(ctx, ox, oy, 5 + p.m2 * 0.6, col);
+            }
+        },
+        {
+            id: 'ohm', cat: 'Electromagnetism', title: "Ohm's Law", icon: '⚡',
+            latex: 'V=IR',
+            desc: 'The current through a conductor is proportional to the voltage across it and inversely proportional to its resistance.',
+            vars: [['V', 'voltage', 'V'], ['I', 'current', 'A'], ['R', 'resistance', 'Ω']],
+            controls: [
+                { k: 'V', label: 'Voltage', min: 1, max: 12, step: 0.5, val: 6, unit: 'V' },
+                { k: 'R', label: 'Resistance', min: 1, max: 10, step: 0.5, val: 3, unit: 'Ω' }
+            ],
+            readout: p => [{ l: 'Current', v: p.V / p.R, u: 'A' }, { l: 'Power', v: p.V * p.V / p.R, u: 'W' }],
+            draw(ctx, p, t, P, col) {
+                const I = p.V / p.R, x1 = 45, x2 = 275, y1 = 55, y2 = 150;
+                ctx.strokeStyle = P.track; ctx.lineWidth = 2; ctx.strokeRect(x1, y1, x2 - x1, y2 - y1);
+                ctx.fillStyle = col; ctx.fillRect(145, y1 - 9, 40, 18);
+                const peri = 2 * ((x2 - x1) + (y2 - y1)), n = 16;
+                ctx.fillStyle = '#ffd27f';
+                for (let i = 0; i < n; i++) {
+                    const d = ((t * I * 32) + i * peri / n) % peri, pt = periPoint(x1, y1, x2, y2, d);
+                    ctx.beginPath(); ctx.arc(pt.x, pt.y, 3, 0, TAU); ctx.fill();
+                }
+                ctx.lineWidth = 1;
+            }
+        },
+        {
+            id: 'coul', cat: 'Electromagnetism', title: "Coulomb's Law", icon: '🧲',
+            latex: 'F=k_e\\dfrac{q_1 q_2}{r^{2}}',
+            desc: 'Like charges repel and opposite charges attract, with a force that follows an inverse-square law.',
+            vars: [['q₁', 'charge 1', 'µC'], ['q₂', 'charge 2', 'µC'], ['r', 'separation', 'cm']],
+            controls: [
+                { k: 'q1', label: 'Charge 1', min: -5, max: 5, step: 0.5, val: 3, unit: 'µC' },
+                { k: 'q2', label: 'Charge 2', min: -5, max: 5, step: 0.5, val: -3, unit: 'µC' },
+                { k: 'r', label: 'Separation', min: 1, max: 10, step: 0.5, val: 4, unit: 'cm' }
+            ],
+            readout: p => {
+                const F = KE * (p.q1 * 1e-6) * (p.q2 * 1e-6) / ((p.r * 0.01) ** 2), s = p.q1 * p.q2;
+                return [
+                    { l: 'Force', v: Math.abs(F), u: 'N' },
+                    { l: s < 0 ? '→ Attractive ←' : (s > 0 ? '← Repulsive →' : 'No force'), v: null }
+                ];
+            },
+            draw(ctx, p, t, P, col) {
+                const cy = 100, cx = LW / 2, attract = p.q1 * p.q2 < 0;
+                const base = 24 + p.r * 9, osc = 7 * Math.sin(t * 2.5) * (attract ? -1 : 1), d = base + osc;
+                drawCharge(ctx, cx - d, cy, p.q1);
+                drawCharge(ctx, cx + d, cy, p.q2);
+            }
+        },
+        {
+            id: 'wave', cat: 'Waves & Optics', title: 'Wave Equation', icon: '🌊',
+            latex: 'v=f\\lambda',
+            desc: 'A wave’s speed equals its frequency multiplied by its wavelength.',
+            vars: [['v', 'wave speed', 'm/s'], ['f', 'frequency', 'Hz'], ['λ', 'wavelength', 'm']],
+            controls: [
+                { k: 'f', label: 'Frequency', min: 0.5, max: 4, step: 0.1, val: 1.5, unit: 'Hz' },
+                { k: 'L', label: 'Wavelength', min: 0.3, max: 2, step: 0.1, val: 1, unit: 'm' }
+            ],
+            readout: p => [{ l: 'Wave speed', v: p.f * p.L, u: 'm/s' }],
+            draw(ctx, p, t, P, col) {
+                const mid = 95, A = 38, lam = p.L * 100, v = p.f * p.L;
+                ctx.strokeStyle = col; ctx.lineWidth = 2.5; ctx.beginPath();
+                for (let x = 0; x <= LW; x += 3) {
+                    const y = mid + A * Math.sin(TAU / lam * (x - v * 100 * t));
+                    x === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+                }
+                ctx.stroke(); ctx.lineWidth = 1;
+            }
+        },
+        {
+            id: 'emc2', cat: 'Relativity', title: 'Mass–Energy Equivalence', icon: '☢️',
+            latex: 'E=mc^{2}',
+            desc: 'Mass and energy are equivalent. Even a tiny mass holds an enormous amount of energy.',
+            vars: [['E', 'energy', 'J'], ['m', 'mass', 'kg'], ['c', 'speed of light', 'm/s']],
+            controls: [{ k: 'm', label: 'Mass', min: 0.0001, max: 1, step: 0.0001, val: 0.001, unit: 'kg' }],
+            readout: p => [
+                { l: 'Energy', v: p.m * C * C, u: 'J' },
+                { l: '≈ TNT', v: p.m * C * C / 4.184e9, u: 't' }
+            ],
+            draw(ctx, p, t, P, col) {
+                const cx = LW / 2, cy = 95;
+                for (let i = 0; i < 4; i++) {
+                    const ph = (t / 2 + i / 4) % 1;
+                    ctx.globalAlpha = 1 - ph; ctx.strokeStyle = col; ctx.lineWidth = 2;
+                    ctx.beginPath(); ctx.arc(cx, cy, 10 + ph * 72, 0, TAU); ctx.stroke();
+                }
+                ctx.globalAlpha = 1; ctx.lineWidth = 1;
+                ball(ctx, cx, cy, 10, '#ff5733');
+            }
+        },
+        {
+            id: 'time', cat: 'Relativity', title: 'Time Dilation', icon: '🕰️',
+            latex: '\\Delta t=\\dfrac{\\Delta t_0}{\\sqrt{1-v^{2}/c^{2}}}',
+            desc: 'A moving clock ticks slower than a stationary one. Time stretches by the Lorentz factor γ.',
+            vars: [['β', 'v ⁄ c', '—'], ['γ', 'Lorentz factor', '—']],
+            controls: [{ k: 'b', label: 'Speed (v/c)', min: 0, max: 0.99, step: 0.01, val: 0.6, unit: 'c' }],
+            readout: p => {
+                const g = 1 / Math.sqrt(1 - p.b * p.b);
+                return [{ l: 'Lorentz factor γ', v: g, u: '' }, { l: '1 s aboard =', v: g, u: 's on Earth' }];
+            },
+            draw(ctx, p, t, P, col) {
+                const g = 1 / Math.sqrt(1 - p.b * p.b);
+                clockFace(ctx, 90, 88, t, P, '#3e82ff', 'Earth');
+                clockFace(ctx, 230, 88, t / g, P, col, 'Spaceship');
+            }
+        },
+        {
+            id: 'heis', cat: 'Quantum', title: 'Uncertainty Principle', icon: '🌫️',
+            latex: '\\Delta x\\,\\Delta p\\ge\\dfrac{\\hbar}{2}',
+            desc: 'The more precisely a particle’s position is pinned down, the less precisely its momentum can be known.',
+            vars: [['Δx', 'position spread', '×10⁻¹⁰ m'], ['Δp', 'momentum spread', 'kg·m/s']],
+            controls: [{ k: 'dx', label: 'Position Δx', min: 0.2, max: 5, step: 0.1, val: 1, unit: 'Å' }],
+            readout: p => [{ l: 'Min momentum Δp', v: HBAR / (2 * p.dx * 1e-10), u: 'kg·m/s' }],
+            draw(ctx, p, t, P, col) {
+                gauss(ctx, 88, 150, p.dx * 9, col, 'Δx  (position)', P);
+                gauss(ctx, 232, 150, 90 / (p.dx * 9), '#3e82ff', 'Δp  (momentum)', P);
+            }
+        },
+        {
+            id: 'planck', cat: 'Quantum', title: 'Planck–Einstein Relation', icon: '💡',
+            latex: 'E=hf',
+            desc: 'Light is quantised: a photon’s energy is proportional to its frequency.',
+            vars: [['E', 'photon energy', 'eV'], ['f', 'frequency', '×10¹⁴ Hz'], ['h', 'Planck constant', 'J·s']],
+            controls: [{ k: 'f', label: 'Frequency', min: 4, max: 7.5, step: 0.1, val: 5.5, unit: '·10¹⁴Hz' }],
+            readout: p => [
+                { l: 'Energy', v: H * p.f * 1e14 / QE, u: 'eV' },
+                { l: 'Wavelength', v: C / (p.f * 1e14) * 1e9, u: 'nm' }
+            ],
+            draw(ctx, p, t, P, col) {
+                const wl = C / (p.f * 1e14) * 1e9, c = specColor(wl), lampx = 24 + (wl - 380) / 320 * 80, mid = 95, A = 38;
+                ctx.strokeStyle = c; ctx.lineWidth = 3; ctx.beginPath();
+                for (let x = 0; x <= LW; x += 3) {
+                    const y = mid + A * Math.sin(TAU / lampx * (x - 120 * t));
+                    x === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+                }
+                ctx.stroke(); ctx.lineWidth = 1;
+            }
+        },
+        {
+            id: 'arch', cat: 'Fluids', title: "Archimedes' Principle", icon: '🛟',
+            latex: 'F_b=\\rho_f\\,V g',
+            desc: 'The buoyant force on an object equals the weight of fluid it displaces. It floats when it is less dense than the fluid.',
+            vars: [['ρ_f', 'fluid density', 'kg/m³'], ['ρ_o', 'object density', 'kg/m³']],
+            controls: [
+                { k: 'ro', label: 'Object density', min: 200, max: 3000, step: 50, val: 600, unit: 'kg/m³' },
+                { k: 'rf', label: 'Fluid density', min: 500, max: 2000, step: 50, val: 1000, unit: 'kg/m³' }
+            ],
+            readout: p => {
+                const fr = p.ro / p.rf;
+                return fr < 1
+                    ? [{ l: 'Floats — submerged', v: fr * 100, u: '%' }]
+                    : [{ l: 'Sinks', v: null }];
+            },
+            draw(ctx, p, t, P, col) {
+                const surf = 78, bs = 42;
+                ctx.fillStyle = 'rgba(62,130,255,0.25)'; ctx.fillRect(0, surf, LW, LH - surf);
+                ctx.strokeStyle = '#3e82ff'; ctx.lineWidth = 2; ctx.beginPath();
+                ctx.moveTo(0, surf + Math.sin(t * 2) * 2); ctx.lineTo(LW, surf + Math.sin(t * 2 + 1) * 2); ctx.stroke(); ctx.lineWidth = 1;
+                const fr = Math.min(1, p.ro / p.rf);
+                const topY = p.ro < p.rf ? surf - bs * (1 - fr) + Math.sin(t * 2) * 3 : LH - bs - 6;
+                ctx.fillStyle = col; ctx.fillRect(LW / 2 - bs / 2, topY, bs, bs);
+            }
+        }
+    ];
+    LAWS.forEach(l => l.color = CAT_COLORS[l.cat]);
+
+    // ---------- render grid ----------
+    const grid = document.getElementById('grid');
+    const emptyEl = document.getElementById('empty');
+    function renderCards() {
+        grid.innerHTML = '';
+        LAWS.forEach(law => {
+            const btn = document.createElement('button');
+            btn.className = 'card';
+            btn.style.setProperty('--c', law.color);
+            btn.dataset.cat = law.cat;
+            btn.dataset.q = (law.title + ' ' + law.cat + ' ' + law.desc + ' ' + law.latex).toLowerCase();
+            btn.innerHTML =
+                `<div class="row"><span class="icon">${law.icon}</span><span class="badge">${law.cat}</span></div>
+                 <h3>${law.title}</h3>
+                 <div class="eq" data-eq="${encodeURIComponent(law.latex)}"></div>
+                 <div class="hint"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2L3 14h7l-1 8 10-12h-7z"/></svg>Tap to simulate</div>`;
+            btn.addEventListener('click', () => openLaw(law));
+            grid.appendChild(btn);
+        });
+        renderMath();
+    }
+    function renderMath() {
+        if (!window.katex) return;
+        document.querySelectorAll('.eq[data-eq]').forEach(el => {
+            if (el.dataset.done) return;
+            try { katex.render(decodeURIComponent(el.dataset.eq), el, { throwOnError: false }); el.dataset.done = '1'; }
+            catch (e) { el.textContent = decodeURIComponent(el.dataset.eq); }
+        });
+    }
+
+    // ---------- filtering ----------
+    const CATS = ['All', ...Object.keys(CAT_COLORS)];
+    const chipsEl = document.getElementById('chips');
+    let activeCat = 'All';
+    CATS.forEach(cat => {
+        const c = document.createElement('button');
+        c.className = 'chip' + (cat === 'All' ? ' active' : '');
+        if (cat !== 'All') c.style.setProperty('--c', CAT_COLORS[cat]);
+        c.innerHTML = (cat === 'All' ? '' : '<span class="dot"></span>') + cat;
+        c.addEventListener('click', () => {
+            activeCat = cat;
+            document.querySelectorAll('.chip').forEach(x => x.classList.remove('active'));
+            c.classList.add('active');
+            applyFilter();
+        });
+        chipsEl.appendChild(c);
+    });
+    const searchEl = document.getElementById('search');
+    searchEl.addEventListener('input', applyFilter);
+    function applyFilter() {
+        const q = searchEl.value.trim().toLowerCase();
+        let shown = 0;
+        document.querySelectorAll('.card').forEach(card => {
+            const okCat = activeCat === 'All' || card.dataset.cat === activeCat;
+            const okQ = !q || card.dataset.q.includes(q);
+            const vis = okCat && okQ;
+            card.style.display = vis ? '' : 'none';
+            if (vis) shown++;
+        });
+        emptyEl.style.display = shown ? 'none' : 'block';
+    }
+
+    // ---------- modal + simulation engine ----------
+    const overlay = document.getElementById('overlay');
+    const canvas = document.getElementById('sim');
+    const ctx = canvas.getContext('2d');
+    let rafId = null, simStart = 0, curLaw = null, curParams = {};
+
+    function fitCanvas() {
+        const dpr = window.devicePixelRatio || 1;
+        canvas.width = LW * dpr; canvas.height = LH * dpr;
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
+
+    function openLaw(law) {
+        curLaw = law;
+        curParams = {};
+        law.controls.forEach(c => curParams[c.k] = c.val);
+
+        document.documentElement.style.setProperty('--mc', law.color);
+        const catEl = document.getElementById('m-cat');
+        catEl.textContent = law.cat; catEl.style.setProperty('--mc', law.color);
+        document.getElementById('m-title').textContent = law.title;
+        document.getElementById('m-desc').textContent = law.desc;
+
+        const eqEl = document.getElementById('m-eq');
+        try { katex.render(law.latex, eqEl, { throwOnError: false, displayMode: true }); }
+        catch (e) { eqEl.textContent = law.latex; }
+
+        const legend = document.getElementById('m-legend');
+        legend.innerHTML = law.vars.map(v =>
+            `<div class="lg"><span class="sym" style="color:${law.color}">${v[0]}</span><span>${v[1]}</span><span class="unit">${v[2]}</span></div>`
+        ).join('');
+
+        // controls
+        const cc = document.getElementById('m-controls');
+        cc.innerHTML = '';
+        law.controls.forEach(c => {
+            const wrap = document.createElement('div');
+            wrap.className = 'ctrl';
+            wrap.style.setProperty('--mc', law.color);
+            wrap.innerHTML =
+                `<label>${c.label}<span class="val"><span id="v-${c.k}">${c.val}</span> ${c.unit}</span></label>
+                 <input type="range" min="${c.min}" max="${c.max}" step="${c.step}" value="${c.val}" data-k="${c.k}">`;
+            const input = wrap.querySelector('input');
+            input.addEventListener('input', () => {
+                curParams[c.k] = parseFloat(input.value);
+                document.getElementById('v-' + c.k).textContent = input.value;
+                updateReadout();
             });
+            cc.appendChild(wrap);
         });
 
-        document.getElementById('themeToggle').addEventListener('click', () => {
-            document.body.classList.toggle('light-theme');
-        });
+        updateReadout();
+        overlay.classList.add('open');
+        overlay.setAttribute('aria-hidden', 'false');
+        document.body.style.overflow = 'hidden';
+        fitCanvas();
+        simStart = performance.now();
+        cancelAnimationFrame(rafId);
+        loop(simStart);
+    }
+
+    function updateReadout() {
+        if (!curLaw) return;
+        const arr = curLaw.readout(curParams);
+        document.getElementById('m-readout').innerHTML = arr.map(r =>
+            r.v === null
+                ? `<span class="pill"><b>${r.l}</b></span>`
+                : `<span class="pill">${r.l} = <b>${fmt(r.v)}</b> ${r.u}</span>`
+        ).join('');
+    }
+
+    function loop(now) {
+        const t = (now - simStart) / 1000, P = pal();
+        ctx.clearRect(0, 0, LW, LH);
+        try { curLaw.draw(ctx, curParams, t, P, curLaw.color); } catch (e) { }
+        rafId = requestAnimationFrame(loop);
+    }
+
+    function closeModal() {
+        overlay.classList.remove('open');
+        overlay.setAttribute('aria-hidden', 'true');
+        document.body.style.overflow = '';
+        cancelAnimationFrame(rafId);
+        rafId = null; curLaw = null;
+    }
+    document.getElementById('closeBtn').addEventListener('click', closeModal);
+    overlay.addEventListener('click', e => { if (e.target === overlay) closeModal(); });
+    document.addEventListener('keydown', e => { if (e.key === 'Escape' && overlay.classList.contains('open')) closeModal(); });
+
+    // ---------- theme ----------
+    const themeBtn = document.getElementById('themeToggle');
+    function applyTheme(theme) {
+        document.body.classList.toggle('light-theme', theme === 'light');
+        try { localStorage.setItem('physTheme', theme); } catch (e) { }
+    }
+    themeBtn.addEventListener('click', () =>
+        applyTheme(document.body.classList.contains('light-theme') ? 'dark' : 'light'));
+    try { applyTheme(localStorage.getItem('physTheme') || 'dark'); } catch (e) { }
+
+    // ---------- boot ----------
+    renderCards();
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', renderMath);
+    }
+    window.addEventListener('load', renderMath); // ensure KaTeX (deferred) has loaded
     </script>
 </body>
 </html>
