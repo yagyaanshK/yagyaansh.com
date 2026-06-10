@@ -358,6 +358,15 @@
         };
     }
     function ball(ctx, x, y, r, c) { ctx.fillStyle = c; ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); ctx.fill(); }
+    function arrow(ctx, x1, y1, x2, y2, c) {
+        const a = Math.atan2(y2 - y1, x2 - x1);
+        ctx.strokeStyle = c; ctx.fillStyle = c; ctx.lineWidth = 2.5;
+        ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(x2, y2);
+        ctx.lineTo(x2 - 9 * Math.cos(a - 0.45), y2 - 9 * Math.sin(a - 0.45));
+        ctx.lineTo(x2 - 9 * Math.cos(a + 0.45), y2 - 9 * Math.sin(a + 0.45));
+        ctx.closePath(); ctx.fill(); ctx.lineWidth = 1;
+    }
     function trackH(ctx, y, P) { ctx.strokeStyle = P.track; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(LW, y); ctx.stroke(); ctx.lineWidth = 1; }
     function periPoint(x1, y1, x2, y2, d) {
         const w = x2 - x1, h = y2 - y1, peri = 2 * (w + h);
@@ -438,20 +447,65 @@
         {
             id: 'n3', cat: 'Mechanics', title: "Newton's Third Law", icon: '💥',
             latex: '\\vec{F}_{AB}=-\\vec{F}_{BA}',
-            desc: 'For every action there is an equal and opposite reaction. When two bodies push apart, total momentum is conserved.',
-            vars: [['mₐ', 'mass A', 'kg'], ['m_b', 'mass B', 'kg']],
+            desc: 'For every action there is an equal and opposite reaction. The compressed spring pushes both masses with the exact same force — the lighter one flies off faster, but their momenta are equal and opposite.',
+            vars: [['F', 'contact force', 'N'], ['m<sub>A</sub>', 'mass A', 'kg'], ['m<sub>B</sub>', 'mass B', 'kg']],
             controls: [
                 { k: 'mA', label: 'Mass A', min: 1, max: 8, step: 0.5, val: 2, unit: 'kg' },
                 { k: 'mB', label: 'Mass B', min: 1, max: 8, step: 0.5, val: 4, unit: 'kg' }
             ],
-            readout: p => [{ l: 'Speed ratio vₐ : v_b', v: p.mB / p.mA, u: '' }],
+            readout: p => [
+                { l: '|F on A| = |F on B|', v: null },
+                { l: 'Speed ratio v<sub>A</sub> : v<sub>B</sub>', v: p.mB / p.mA, u: '' }
+            ],
             draw(ctx, p, t, P, col) {
-                const cx = LW / 2, cy = 120, tot = p.mA + p.mB;
-                const vA = p.mB / tot, vB = p.mA / tot, tt = t % 2.4, d = tt * 120;
-                trackH(ctx, 150, P);
+                const T = 3.4, hold = 0.9, push = 0.6, Fc = 240, gap0 = 9;
+                const tc = t % T, cx = LW / 2, trackY = 150;
+                const aA = Fc / p.mA, aB = Fc / p.mB;          // same force, different masses
                 const rA = 9 + p.mA * 2.4, rB = 9 + p.mB * 2.4;
-                ball(ctx, cx - rA - d * vA, cy, rA, '#3e82ff');
-                ball(ctx, cx + rB + d * vB, cy, rB, col);
+                const yA = trackY - rA, yB = trackY - rB;
+
+                // rest → spring pushes both apart → coast
+                let dA = 0, dB = 0;
+                const contact = tc < hold + push;
+                if (tc >= hold) {
+                    const tp = Math.min(tc - hold, push), tcoast = Math.max(0, tc - hold - push);
+                    dA = 0.5 * aA * tp * tp + aA * push * tcoast;
+                    dB = 0.5 * aB * tp * tp + aB * push * tcoast;
+                }
+                const xA = cx - gap0 - rA - dA, xB = cx + gap0 + rB + dB;
+
+                trackH(ctx, trackY, P);
+
+                // spring: between the ball faces while in contact, then left behind at rest
+                const dAp = 0.5 * aA * push * push, dBp = 0.5 * aB * push * push;
+                const p1x = contact ? xA + rA : cx - gap0 - dAp, p1y = yA;
+                const p2x = contact ? xB - rB : cx + gap0 + dBp, p2y = yB;
+                const sdx = p2x - p1x, sdy = p2y - p1y, slen = Math.hypot(sdx, sdy);
+                const nxs = -sdy / slen, nys = sdx / slen;
+                ctx.strokeStyle = P.track; ctx.lineWidth = 2; ctx.beginPath();
+                const segs = 48;
+                for (let i = 0; i <= segs; i++) {
+                    const f = i / segs;
+                    const amp = (i > 4 && i < segs - 4) ? 7 * Math.sin(f * 9 * TAU) : 0;
+                    const X = p1x + sdx * f + nxs * amp, Y = p1y + sdy * f + nys * amp;
+                    i === 0 ? ctx.moveTo(X, Y) : ctx.lineTo(X, Y);
+                }
+                ctx.stroke(); ctx.lineWidth = 1;
+
+                ball(ctx, xA, yA, rA, '#3e82ff');
+                ball(ctx, xB, yB, rB, col);
+
+                // equal & opposite force arrows, only while the spring is in contact
+                if (contact) {
+                    const L = 26 * Math.min(1, tc / 0.6);
+                    arrow(ctx, xA - rA - 3, yA, xA - rA - 3 - L, yA, '#ff5733');
+                    arrow(ctx, xB + rB + 3, yB, xB + rB + 3 + L, yB, '#ff5733');
+                    ctx.fillStyle = '#ff5733'; ctx.font = 'bold 13px Quicksand'; ctx.textAlign = 'center';
+                    ctx.fillText('F', xA - rA - 3 - L / 2, yA - 9);
+                    ctx.fillText('F', xB + rB + 3 + L / 2, yB - 9);
+                    ctx.fillStyle = P.text; ctx.font = '12px Quicksand';
+                    ctx.fillText('equal & opposite forces', cx, 38);
+                }
             }
         },
         {
@@ -716,7 +770,7 @@
             id: 'arch', cat: 'Fluids', title: "Archimedes' Principle", icon: '🛟',
             latex: 'F_b=\\rho_f\\,V g',
             desc: 'The buoyant force on an object equals the weight of fluid it displaces. It floats when it is less dense than the fluid.',
-            vars: [['ρ_f', 'fluid density', 'kg/m³'], ['ρ_o', 'object density', 'kg/m³']],
+            vars: [['ρ<sub>f</sub>', 'fluid density', 'kg/m³'], ['ρ<sub>o</sub>', 'object density', 'kg/m³']],
             controls: [
                 { k: 'ro', label: 'Object density', min: 200, max: 3000, step: 50, val: 600, unit: 'kg/m³' },
                 { k: 'rf', label: 'Fluid density', min: 500, max: 2000, step: 50, val: 1000, unit: 'kg/m³' }
