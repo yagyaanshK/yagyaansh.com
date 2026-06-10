@@ -351,6 +351,7 @@
     function pal() {
         const light = document.body.classList.contains('light-theme');
         return {
+            light,
             track: light ? 'rgba(17,38,76,0.28)' : 'rgba(255,255,255,0.30)',
             grid: light ? 'rgba(17,38,76,0.10)' : 'rgba(255,255,255,0.10)',
             text: light ? '#16243f' : '#dce6f5'
@@ -614,7 +615,7 @@
         {
             id: 'emc2', cat: 'Relativity', title: 'Mass–Energy Equivalence', icon: '☢️',
             latex: 'E=mc^{2}',
-            desc: 'Mass and energy are equivalent. Even a tiny mass holds an enormous amount of energy.',
+            desc: 'Mass and energy are two forms of the same thing. Watch the mass m get consumed and carried away as photons, filling the energy meter E — even a tiny mass releases an enormous amount of energy.',
             vars: [['E', 'energy', 'J'], ['m', 'mass', 'kg'], ['c', 'speed of light', 'm/s']],
             controls: [{ k: 'm', label: 'Mass', min: 0.0001, max: 1, step: 0.0001, val: 0.001, unit: 'kg' }],
             readout: p => [
@@ -622,14 +623,45 @@
                 { l: '≈ TNT', v: p.m * C * C / 4.184e9, u: 't' }
             ],
             draw(ctx, p, t, P, col) {
-                const cx = LW / 2, cy = 95;
-                for (let i = 0; i < 4; i++) {
-                    const ph = (t / 2 + i / 4) % 1;
-                    ctx.globalAlpha = 1 - ph; ctx.strokeStyle = col; ctx.lineWidth = 2;
-                    ctx.beginPath(); ctx.arc(cx, cy, 10 + ph * 72, 0, TAU); ctx.stroke();
-                }
+                const T = 5, frac = (t % T) / T;
+                const lm = (Math.log10(p.m) + 4) / 4;          // slider 0.0001–1 kg → 0..1
+                const bx = 74, by = 96;                         // mass position
+                const R0 = 12 + lm * 16, r = R0 * (1 - frac);   // mass being consumed
+                const ex = 250, e0 = 152;                       // energy bar, anchored at bottom
+                const eH = 50 + lm * 66, fill = eH * frac;
+
+                // photons streaming from the mass to the energy meter
+                const phc = P.light ? '#d99a00' : '#ffd24a';
+                ctx.lineWidth = 1.3 + lm * 1.5;
+                ctx.globalAlpha = 0.9 * (1 - frac * frac);
+                [-16, 0, 16].forEach((dy, i) => {
+                    ctx.strokeStyle = phc;
+                    ctx.beginPath();
+                    const x0 = bx + r + 5, x1 = ex - 8;
+                    for (let x = x0; x <= x1; x += 2) {
+                        const f = (x - x0) / (x1 - x0);
+                        const y = by + dy * f + 4.5 * Math.sin(0.5 * x - 10 * t + i * 2);
+                        x === x0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+                    }
+                    ctx.stroke();
+                });
                 ctx.globalAlpha = 1; ctx.lineWidth = 1;
-                ball(ctx, cx, cy, 10, '#ff5733');
+
+                // the shrinking mass
+                if (r > 0.5) {
+                    ctx.globalAlpha = 0.25; ball(ctx, bx, by, r + 6, '#ff5733'); ctx.globalAlpha = 1;
+                    ball(ctx, bx, by, r, '#ff5733');
+                }
+
+                // energy meter fills as the mass disappears
+                ctx.strokeStyle = P.track; ctx.strokeRect(ex, e0 - eH, 20, eH);
+                ctx.fillStyle = col; ctx.fillRect(ex, e0 - fill, 20, fill);
+
+                // labels
+                ctx.fillStyle = P.text; ctx.font = '13px Quicksand'; ctx.textAlign = 'center';
+                ctx.fillText('m', bx, by + R0 + 22);
+                ctx.fillText('E', ex + 10, e0 + 20);
+                ctx.fillText('photons (γ)', (bx + ex) / 2, by - 34);
             }
         },
         {
