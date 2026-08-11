@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="Selected website work by Yagyaansh Khaneja, an independent web designer and developer in India.">
+  <meta name="description" content="Selected website and digital-system work by Yagyaansh Khaneja, an independent designer and developer in India.">
   <title>Portfolio | Yagyaansh Khaneja</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -11,39 +11,140 @@
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <header>
+  <header class="site-header">
     <a class="brand" href="/">Yagyaansh Khaneja</a>
-    <a class="contact-link" href="mailto:contact@yagyaansh.com">contact@yagyaansh.com</a>
+    <nav aria-label="Portfolio navigation">
+      <a href="../vibe_code/vibe_index.html">Engineering work</a>
+      <a href="mailto:contact@yagyaansh.com">Contact</a>
+    </nav>
   </header>
 
   <main>
-    <section class="intro">
+    <section class="intro" aria-labelledby="portfolio-title">
       <p class="eyebrow">Selected work</p>
-      <h1>Websites designed to make the next action obvious.</h1>
-      <p class="intro-copy">Independent web design and development for small businesses that need a credible, fast, mobile-friendly presence.</p>
-    </section>
-
-    <section class="project" aria-labelledby="hotel-demo-title">
-      <a class="project-image-link" href="hotel-website-demo/" aria-label="Open the hotel website demo">
-        <img src="assets/hotel-demo-thumb.png" alt="Aranya Haveli fictional heritage hotel website demo">
-      </a>
-      <div class="project-details">
-        <p class="eyebrow">Hospitality website</p>
-        <h2 id="hotel-demo-title">Aranya Haveli</h2>
-        <p>A fictional Jaipur heritage-hotel website demonstrating room positioning, mobile enquiry paths, local information, and direct-booking calls to action.</p>
-        <dl>
-          <div><dt>Format</dt><dd>Responsive one-page site</dd></div>
-          <div><dt>Focus</dt><dd>Mobile clarity and direct enquiries</dd></div>
-          <div><dt>Stack</dt><dd>HTML, CSS, JavaScript</dd></div>
-        </dl>
-        <a class="button" href="hotel-website-demo/">View live demo</a>
+      <h1 id="portfolio-title">Websites that give people a clear reason to stay, trust and act.</h1>
+      <p class="intro-copy">Independent website design and development for small businesses, institutions and mission-driven teams. Each project below is live or presented as an explicitly labelled demonstration.</p>
+      <div class="intro-actions">
+        <a class="button" href="mailto:contact@yagyaansh.com?subject=Website%20project%20enquiry">Discuss a website</a>
+        <a class="text-link" href="../vibe_code/vibe_index.html">Browse products and engineering work</a>
       </div>
     </section>
 
-    <section class="availability">
+    <section class="work" aria-labelledby="selected-work-title">
+      <div class="section-heading">
+        <p class="eyebrow">Primary portfolio</p>
+        <h2 id="selected-work-title">Five focused examples</h2>
+        <p>Hospitality, social impact, institutional systems and professional services.</p>
+      </div>
+
+      <article class="project" aria-labelledby="hotel-demo-title">
+        <div class="project-preview project-preview-local">
+          <iframe src="hotel-website-demo/" title="Live preview of the Aranya Haveli hotel website demonstration" loading="eager" tabindex="-1" aria-hidden="true"></iframe>
+          <a class="preview-link" href="hotel-website-demo/">Open demo</a>
+        </div>
+        <div class="project-details">
+          <p class="eyebrow">Hospitality website · Demonstration</p>
+          <h3 id="hotel-demo-title">Aranya Haveli</h3>
+          <p>A focused heritage-hotel concept showing room positioning, local discovery, direct-booking prompts and mobile enquiry routes.</p>
+          <dl>
+            <div><dt>Format</dt><dd>Responsive one-page site</dd></div>
+            <div><dt>Focus</dt><dd>Direct enquiries</dd></div>
+            <div><dt>Delivery</dt><dd>Design and development</dd></div>
+          </dl>
+          <a class="button" href="hotel-website-demo/">View live demo</a>
+        </div>
+      </article>
+
+      <article class="project project-reverse" aria-labelledby="seehwa-title">
+        <div class="project-preview">
+          <iframe src="https://seehwagreen.org/" title="Live preview of the SEEHWA Green Foundation website" loading="lazy" tabindex="-1" aria-hidden="true"></iframe>
+          <a class="preview-link" href="https://seehwagreen.org/" target="_blank" rel="noopener">Open website</a>
+        </div>
+        <div class="project-details">
+          <p class="eyebrow">Non-profit · Climate · Ladakh</p>
+          <h3 id="seehwa-title">SEEHWA Green Foundation</h3>
+          <p>A complete public presence for a Ladakh-based foundation, structured around its work, team, contribution routes and stakeholder needs.</p>
+          <dl>
+            <div><dt>Format</dt><dd>Responsive multi-page site</dd></div>
+            <div><dt>Included</dt><dd>SEO and structured data</dd></div>
+            <div><dt>Delivery</dt><dd>End-to-end</dd></div>
+          </dl>
+          <a class="button" href="https://seehwagreen.org/" target="_blank" rel="noopener">Visit SEEHWA</a>
+        </div>
+      </article>
+
+      <article class="project" aria-labelledby="nomads-title">
+        <div class="project-preview">
+          <iframe src="https://regenerativenomads.org/" title="Live preview of the Regenerative Nomads website" loading="lazy" tabindex="-1" aria-hidden="true"></iframe>
+          <a class="preview-link" href="https://regenerativenomads.org/" target="_blank" rel="noopener">Open website</a>
+        </div>
+        <div class="project-details">
+          <p class="eyebrow">Education · Place-based storytelling</p>
+          <h3 id="nomads-title">Regenerative Nomads</h3>
+          <p>An image-led experience for a mobile learning initiative working with young people, ecology and cultural knowledge in Changthang, Ladakh.</p>
+          <dl>
+            <div><dt>Format</dt><dd>Immersive web experience</dd></div>
+            <div><dt>Focus</dt><dd>Story and participation</dd></div>
+            <div><dt>Context</dt><dd>Education and ecology</dd></div>
+          </dl>
+          <a class="button" href="https://regenerativenomads.org/" target="_blank" rel="noopener">Visit project</a>
+        </div>
+      </article>
+
+      <article class="project project-reverse" aria-labelledby="cibs-title">
+        <div class="project-preview">
+          <iframe src="https://cibs.thirdpolesolutions.in/" title="Live preview of the CIBS institutional website stakeholder prototype" loading="lazy" tabindex="-1" aria-hidden="true"></iframe>
+          <a class="preview-link" href="https://cibs.thirdpolesolutions.in/" target="_blank" rel="noopener">Open prototype</a>
+        </div>
+        <div class="project-details">
+          <p class="eyebrow">Education technology · Stakeholder prototype</p>
+          <h3 id="cibs-title">CIBS Digital Ecosystem</h3>
+          <p>A working demonstration that translates a university digitisation brief into a public website, student mobile portal, management-system workflows and an administrative publishing experience.</p>
+          <dl>
+            <div><dt>Surface</dt><dd>Website and four user views</dd></div>
+            <div><dt>Stack</dt><dd>Next.js and TypeScript</dd></div>
+            <div><dt>Status</dt><dd>Prototype with fictional records</dd></div>
+          </dl>
+          <div class="button-row">
+            <a class="button" href="https://cibs.thirdpolesolutions.in/" target="_blank" rel="noopener">Public website</a>
+            <a class="text-link" href="https://cibs.thirdpolesolutions.in/ums-preview/" target="_blank" rel="noopener">System preview</a>
+          </div>
+        </div>
+      </article>
+
+      <article class="project" aria-labelledby="thirdpole-title">
+        <div class="project-preview">
+          <iframe src="https://thirdpolesolutions.in/" title="Live preview of the Thirdpole Solutions website" loading="lazy" tabindex="-1" aria-hidden="true"></iframe>
+          <a class="preview-link" href="https://thirdpolesolutions.in/" target="_blank" rel="noopener">Open website</a>
+        </div>
+        <div class="project-details">
+          <p class="eyebrow">Professional services · Ladakh</p>
+          <h3 id="thirdpole-title">Thirdpole Solutions</h3>
+          <p>A professional brochure website positioning a Leh-based technology, climate-tech and engineering consultancy for institutional clients.</p>
+          <dl>
+            <div><dt>Format</dt><dd>Responsive company website</dd></div>
+            <div><dt>Focus</dt><dd>Services and credibility</dd></div>
+            <div><dt>Delivery</dt><dd>Design through deployment</dd></div>
+          </dl>
+          <a class="button" href="https://thirdpolesolutions.in/" target="_blank" rel="noopener">Visit Thirdpole</a>
+        </div>
+      </article>
+    </section>
+
+    <section class="engineering-callout" aria-labelledby="engineering-title">
+      <div>
+        <p class="eyebrow">Beyond brochure websites</p>
+        <h2 id="engineering-title">Products, tools and interactive experiments</h2>
+        <p>Explore accounting software, scientific visualisations, open-source developer tools and team projects on the engineering page.</p>
+      </div>
+      <a class="button button-light" href="../vibe_code/vibe_index.html">View engineering work</a>
+    </section>
+
+    <section class="availability" aria-labelledby="availability-title">
       <div>
         <p class="eyebrow">Available for new projects</p>
-        <h2>Need a focused display or brochure website?</h2>
+        <h2 id="availability-title">Need a focused display or brochure website?</h2>
+        <p>One-page launches, three-to-five-page brochure sites, basic SEO and complete deployment.</p>
       </div>
       <a class="button button-light" href="mailto:contact@yagyaansh.com?subject=Website%20project%20enquiry">Start a conversation</a>
     </section>
@@ -51,7 +152,7 @@
 
   <footer>
     <span>Yagyaansh Khaneja</span>
-    <span>Independent web designer and developer</span>
+    <span>Independent designer and developer · <a href="mailto:contact@yagyaansh.com">contact@yagyaansh.com</a></span>
   </footer>
 </body>
 </html>

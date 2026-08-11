@@ -1,144 +1,242 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Vibe Code Projects</title>
-    <link rel="icon" type="image/x-icon" href="../assets/images/art.svg">
-    <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@300&display=swap" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Satisfy&display=swap" rel="stylesheet">  
-    <link href="https://fonts.googleapis.com/css2?family=Poppins&display=swap" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Quicksand&display=swap" rel="stylesheet">
-    <link id="theme" rel="stylesheet" title="light" href="../assets/stylesheets/main-dark.css">
-    <script src="../assets/js/main.js"></script>
-    <script>
-        function switchTheme() {
-            const themeLink = document.getElementById('theme');
-            const currentTheme = themeLink.getAttribute('href');
-            const newTheme = currentTheme.includes('main-dark.css') ? '../assets/stylesheets/main.css' : '../assets/stylesheets/main-dark.css';
-            themeLink.setAttribute('href', newTheme);
-
-            // Adjust footer gradient colors and href styling based on theme
-            const footer = document.querySelector('footer');
-            const exploreProjectsHeadings = document.querySelectorAll('.projects h2');
-            const h1 = document.querySelector('h1');
-            const links = document.querySelectorAll('a');
-            const listItems = document.querySelectorAll('.project-list li');
-
-            if (newTheme.includes('main.css')) {
-                footer.style.background = 'linear-gradient(to bottom, #ffffff,#3e82ff)'; // Light theme colors
-                footer.style.color = 'white';
-                if (h1) h1.style.color = '#72001b';
-                exploreProjectsHeadings.forEach(h2 => h2.style.color = '#72001b'); // Dark color for light theme
-                links.forEach(link => {
-                    link.style.color = '#11264c';
-                    link.style.textDecoration = 'underline';
-                    link.addEventListener('mouseover', () => link.style.color = '#72001b');
-                    link.addEventListener('mouseout', () => link.style.color = '#11264c');
-                    link.addEventListener('focus', () => link.style.color = '#72001b');
-                    link.addEventListener('blur', () => link.style.color = '#11264c');
-                });
-                listItems.forEach(item => {
-                    item.style.color = '#11264c';
-                });
-            } else {
-                footer.style.background = 'linear-gradient(to bottom,#11264c, #3e82ff)'; // Dark theme colors
-                footer.style.color = 'white';
-                if (h1) h1.style.color = '#ffa75f';
-                exploreProjectsHeadings.forEach(h2 => h2.style.color = '#ffa75f'); // White color for dark theme
-                links.forEach(link => {
-                    link.style.color = '#ffffff';
-                    link.style.textDecoration = 'underline';
-                    link.addEventListener('mouseover', () => link.style.color = '#ff5733');
-                    link.addEventListener('mouseout', () => link.style.color = '#ffffff');
-                    link.addEventListener('focus', () => link.style.color = '#ff5733');
-                    link.addEventListener('blur', () => link.style.color = '#ffffff');
-                });
-                listItems.forEach(item => {
-                    item.style.color = '#ffffff';
-                });
-            }
-        }
-    </script>
-    <style>
-        footer {
-            position: fixed;
-            bottom: 0;
-            width: 100%;
-            text-align: center;
-            background: linear-gradient(to bottom,#11264c, #3e82ff);
-            color: white;
-            padding: 10px 0;
-        }
-
-        a {
-            color: #ffffff;
-            text-decoration: underline;
-        }
-
-        a:hover, a:focus {
-            color: #ff5733; /* Changed hover and focus color */
-            text-decoration: none;
-        }
-
-        .projects h2 {
-            font-size: clamp(1.5rem, 5vw, 2.5rem);
-        }
-
-        .project-list {
-            font-size: clamp(1.1rem, 3.5vw, 1.8rem);
-            text-align: left;
-        }
-
-        body {
-            overflow-y: auto !important;
-        }
-
-        main {
-            padding-bottom: 60px;
-        }
-    </style>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Products, open-source tools, visual experiments and team projects by Yagyaansh Khaneja.">
+  <title>Engineering Work | Yagyaansh Khaneja</title>
+  <link rel="icon" type="image/x-icon" href="../assets/images/art.svg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Newsreader:opsz,wght@6..72,500;6..72,600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="projects.css">
+  <script src="projects.js" defer></script>
 </head>
 <body>
-    <div class="wrapper">
-        <nav class="theme" style="position: absolute; top: 10px; right: 10px;">
-            <button class="theme" onclick="switchTheme();">Switch Theme</button>
-        </nav>
-        <header>
-            <h1 style="color: #ffa75f;">Just Vibing</h1>
-        </header>
-        <main style="display: flex; flex-direction: column; align-items: center;">
-            <div style="width: fit-content;">
-                <section class="projects">
-                    <h2 style="text-align: center; color: #ffa75f; margin-bottom: 20px;">Explore Projects</h2>
-                    <ul class="project-list" style="list-style: none; padding: 0; margin: 0;">
-                        <li style="color: #ffffff;">• <a href="physics_catalog/laws_physics.html">Physics Equations</a></li>
-                        <li style="color: #ffffff;">• <a href="/standardmodel">Standard Model 3D Explorer</a></li>
-                        <li style="color: #ffffff;">• <a href="/liquidglass">Liquid Glass Engine</a></li>
-                        <li style="color: #ffffff;">• <a href="/reclip" style="display: inline-flex; align-items: center;">ReClip - Media Downloader <img src="https://raw.githubusercontent.com/yagyaanshK/reclip/hf-deploy/static/favicon.png" alt="ReClip Icon" style="height: 1.2rem; margin-left: 10px; border-radius: 6px;"></a></li>
-                        <li style="color: #ffffff;">• <a href="https://github.com/yagyaanshK/context-bridge" target="_blank">Context Bridge</a></li>
-                        <li style="color: #ffffff;">• <a href="https://github.com/yagyaanshK/scientific-grounding" target="_blank">Scientific Grounding</a></li>
-                    </ul>
-                </section>
-                <section class="projects" style="margin-top: 40px;">
-                    <h2 style="text-align: center; color: #ffa75f; margin-bottom: 20px;">Team Projects</h2>
-                    <ul class="project-list" style="list-style: none; padding: 0; margin: 0;">
-                        <li style="color: #ffffff;">• <a href="https://ideapoll.rjha.dev/" target="_blank">IdeaPoll</a></li>
-                        <li style="color: #ffffff;">• <a href="https://collegiate.rjha.dev/" target="_blank">Collegiate</a></li>
-                        <li style="color: #ffffff;">• <a href="https://play.google.com/store/apps/details?id=com.devsarc.alertojobs" target="_blank">Alert O Jobs</a></li>
-                    </ul>
-                </section>
-                <section class="projects" style="margin-top: 40px;">
-                    <h2 style="text-align: center; color: #ffa75f; margin-bottom: 20px;">Products</h2>
-                    <ul class="project-list" style="list-style: none; padding: 0; margin: 0;">
-                        <li style="color: #ffffff;">• <a href="https://sahisay.com/" target="_blank">SahiSay</a></li>
-                    </ul>
-                </section>
+  <header class="site-header">
+    <a class="brand" href="/">Yagyaansh Khaneja</a>
+    <nav aria-label="Engineering page navigation">
+      <a href="../portfolio/">Selected work</a>
+      <a href="mailto:contact@yagyaansh.com">Contact</a>
+    </nav>
+  </header>
+
+  <main>
+    <section class="intro" aria-labelledby="engineering-title">
+      <p class="eyebrow">Engineering work</p>
+      <h1 id="engineering-title">Products, tools and interactive experiments.</h1>
+      <p>Independent builds and collaborations across accounting, scientific visualisation, media tooling and developer infrastructure. Live embeds are intentionally non-interactive here; open any project to use it.</p>
+    </section>
+
+    <section class="project-browser" aria-labelledby="projects-title">
+      <div class="browser-heading">
+        <div>
+          <p class="eyebrow">Project browser</p>
+          <h2 id="projects-title">Explore the work</h2>
+        </div>
+        <div class="filters" role="group" aria-label="Filter projects">
+          <button type="button" class="filter is-active" data-filter="all" aria-pressed="true">All</button>
+          <button type="button" class="filter" data-filter="product" aria-pressed="false">Products</button>
+          <button type="button" class="filter" data-filter="experiment" aria-pressed="false">Experiments</button>
+          <button type="button" class="filter" data-filter="open-source" aria-pressed="false">Open source</button>
+          <button type="button" class="filter" data-filter="team" aria-pressed="false">Team work</button>
+        </div>
+      </div>
+
+      <div class="project-grid" id="project-grid">
+        <article class="project-card project-card-featured" data-category="product" aria-labelledby="sahisay-title">
+          <a class="card-preview preview-cover cover-sahisay" href="https://sahisay.com/" target="_blank" rel="noopener" aria-label="Open SahiSay">
+            <div class="cover-content">
+              <span class="cover-kicker">SahiSay · Reconciliation</span>
+              <strong>Upload. Match. Done.</strong>
+              <span>Bank statement</span>
+              <span class="cover-connector">→</span>
+              <span>Accounting export</span>
+              <span class="cover-result">Reviewable matches</span>
             </div>
-        </main>
-        <footer>
-            <p>&copy; 2025 Yagyaansh Khaneja. All rights reserved.</p>
-        </footer>
-    </div>
+            <span class="preview-status">Product overview</span>
+          </a>
+          <div class="card-copy">
+            <p class="eyebrow">Solo product · Public beta</p>
+            <h3 id="sahisay-title">SahiSay</h3>
+            <p>Privacy-conscious bank reconciliation for Indian accountants, CA firms and small businesses, powered by a Rust and WebAssembly matching engine.</p>
+            <div class="card-links">
+              <a href="https://sahisay.com/" target="_blank" rel="noopener">Open product</a>
+            </div>
+          </div>
+        </article>
+
+        <article class="project-card" data-category="experiment" aria-labelledby="physics-title">
+          <a class="card-preview" href="physics_catalog/laws_physics.html">
+            <iframe src="physics_catalog/laws_physics.html" title="Live preview of the Interactive Physics Catalog" loading="lazy" tabindex="-1" aria-hidden="true"></iframe>
+            <span class="preview-status preview-live">Live preview</span>
+          </a>
+          <div class="card-copy">
+            <p class="eyebrow">Interactive science</p>
+            <h3 id="physics-title">Physics Catalog</h3>
+            <p>Searchable physical laws with typeset equations, category filters and parameter-driven canvas simulations.</p>
+            <div class="card-links"><a href="physics_catalog/laws_physics.html">Open catalog</a></div>
+          </div>
+        </article>
+
+        <article class="project-card" data-category="experiment" aria-labelledby="standard-model-title">
+          <a class="card-preview" href="/standardmodel">
+            <iframe src="https://yagyaanshk.github.io/standard_model/web/" title="Live preview of the Standard Model 3D Explorer" loading="lazy" tabindex="-1" aria-hidden="true"></iframe>
+            <span class="preview-status preview-live">Live preview</span>
+          </a>
+          <div class="card-copy">
+            <p class="eyebrow">Three.js · Scientific visualisation</p>
+            <h3 id="standard-model-title">Standard Model 3D</h3>
+            <p>An explorable three-dimensional view of fundamental particles, properties and interaction relationships.</p>
+            <div class="card-links">
+              <a href="/standardmodel">Open explorer</a>
+              <a href="https://github.com/yagyaanshK/standard_model" target="_blank" rel="noopener">Source</a>
+            </div>
+          </div>
+        </article>
+
+        <article class="project-card" data-category="experiment" aria-labelledby="liquid-title">
+          <a class="card-preview" href="/liquidglass">
+            <iframe src="https://yagyaanshk.github.io/liquid-glass-laminar-flow/" title="Live preview of the Liquid Glass refraction showcase" loading="lazy" tabindex="-1" aria-hidden="true"></iframe>
+            <span class="preview-status preview-live">Live preview</span>
+          </a>
+          <div class="card-copy">
+            <p class="eyebrow">WebGL · Interface graphics</p>
+            <h3 id="liquid-title">Liquid Glass</h3>
+            <p>A browser refraction showcase spanning GLSL shaders, SVG displacement maps, CSS filters and interactive controls.</p>
+            <div class="card-links">
+              <a href="/liquidglass">Open showcase</a>
+              <a href="https://github.com/yagyaanshK/liquid-glass-laminar-flow" target="_blank" rel="noopener">Source</a>
+            </div>
+          </div>
+        </article>
+
+        <article class="project-card" data-category="product" aria-labelledby="reclip-title">
+          <a class="card-preview" href="/reclip">
+            <iframe src="https://daddy23-reclip.hf.space/" title="Live preview of the ReClip media downloader" loading="lazy" tabindex="-1" aria-hidden="true"></iframe>
+            <span class="preview-status preview-live">Live preview</span>
+          </a>
+          <div class="card-copy">
+            <p class="eyebrow">Desktop and web utility</p>
+            <h3 id="reclip-title">ReClip</h3>
+            <p>A self-hosted video and audio downloader with batch input, format controls and packaged desktop releases.</p>
+            <div class="card-links">
+              <a href="/reclip">Open utility</a>
+              <a href="https://github.com/yagyaanshK/reclip" target="_blank" rel="noopener">Source</a>
+            </div>
+          </div>
+        </article>
+
+        <article class="project-card" data-category="open-source" aria-labelledby="context-title">
+          <a class="card-preview preview-image" href="https://github.com/yagyaanshK/context-bridge" target="_blank" rel="noopener">
+            <img src="assets/context-bridge-preview.png" alt="Context Bridge GitHub project preview" loading="lazy">
+            <span class="preview-status">Repository preview</span>
+          </a>
+          <div class="card-copy">
+            <p class="eyebrow">Open source · Developer tools</p>
+            <h3 id="context-title">Context Bridge</h3>
+            <p>A local, vendor-neutral handoff layer for continuing coding sessions across Claude, Codex and other agentic tools.</p>
+            <div class="card-links"><a href="https://github.com/yagyaanshK/context-bridge" target="_blank" rel="noopener">View repository</a></div>
+          </div>
+        </article>
+
+        <article class="project-card" data-category="open-source" aria-labelledby="grounding-title">
+          <a class="card-preview preview-cover cover-grounding" href="https://github.com/yagyaanshK/scientific-grounding" target="_blank" rel="noopener" aria-label="Open Scientific Grounding on GitHub">
+            <div class="cover-content">
+              <span class="cover-kicker">Scientific Grounding</span>
+              <strong>Assumptions are hypotheses.</strong>
+              <span>Observe</span>
+              <span>Test</span>
+              <span>Verify</span>
+            </div>
+            <span class="preview-status">Repository overview</span>
+          </a>
+          <div class="card-copy">
+            <p class="eyebrow">Open source · Agent reliability</p>
+            <h3 id="grounding-title">Scientific Grounding</h3>
+            <p>A compact instruction set that pushes coding agents to treat assumptions as hypotheses and test against observed reality.</p>
+            <div class="card-links"><a href="https://github.com/yagyaanshK/scientific-grounding" target="_blank" rel="noopener">View repository</a></div>
+          </div>
+        </article>
+
+        <article class="project-card" data-category="team" aria-labelledby="ideapoll-title">
+          <a class="card-preview" href="https://ideapoll.rjha.dev/" target="_blank" rel="noopener">
+            <iframe src="https://ideapoll.rjha.dev/" title="Live preview of IdeaPoll" loading="lazy" tabindex="-1" aria-hidden="true"></iframe>
+            <span class="preview-status preview-live">Live preview</span>
+          </a>
+          <div class="card-copy">
+            <p class="eyebrow">Team project · Polling</p>
+            <h3 id="ideapoll-title">IdeaPoll</h3>
+            <p>Create single-choice or multiple-choice polls, share them and review results through a focused public interface.</p>
+            <div class="card-links"><a href="https://ideapoll.rjha.dev/" target="_blank" rel="noopener">Open project</a></div>
+          </div>
+        </article>
+
+        <article class="project-card" data-category="team" aria-labelledby="collegiate-title">
+          <a class="card-preview preview-cover cover-collegiate" href="https://collegiate.rjha.dev/" target="_blank" rel="noopener" aria-label="Open Collegiate">
+            <div class="cover-content">
+              <span class="cover-kicker">Collegiate</span>
+              <strong>Compare MS programmes with context.</strong>
+              <span>Programme fit</span>
+              <span>Estimated cost</span>
+              <span>Shortlist</span>
+            </div>
+            <span class="preview-status">Product overview</span>
+          </a>
+          <div class="card-copy">
+            <p class="eyebrow">Team project · Education</p>
+            <h3 id="collegiate-title">Collegiate</h3>
+            <p>A graduate-program discovery and comparison experience for international students researching MS options.</p>
+            <div class="card-links"><a href="https://collegiate.rjha.dev/" target="_blank" rel="noopener">Open project</a></div>
+          </div>
+        </article>
+
+        <article class="project-card" data-category="team" aria-labelledby="alert-title">
+          <a class="card-preview preview-image" href="https://play.google.com/store/apps/details?id=com.devsarc.alertojobs" target="_blank" rel="noopener">
+            <img src="assets/alertojobs-preview.png" alt="Preview of the AlerToJobs Google Play listing" loading="lazy">
+            <span class="preview-status">Store snapshot</span>
+          </a>
+          <div class="card-copy">
+            <p class="eyebrow">Team project · Android</p>
+            <h3 id="alert-title">AlerToJobs</h3>
+            <p>An offline-first Android application that monitors company career pages and notifies users about new matching roles.</p>
+            <div class="card-links"><a href="https://play.google.com/store/apps/details?id=com.devsarc.alertojobs" target="_blank" rel="noopener">View on Google Play</a></div>
+          </div>
+        </article>
+
+        <article class="project-card" data-category="team" aria-labelledby="genie-title">
+          <a class="card-preview" href="https://genie.ngo/" target="_blank" rel="noopener">
+            <iframe src="https://genie.ngo/" title="Live preview of the Genie NGO website" loading="lazy" tabindex="-1" aria-hidden="true"></iframe>
+            <span class="preview-status preview-live">Live preview</span>
+          </a>
+          <div class="card-copy">
+            <p class="eyebrow">Web collaboration · Non-profit</p>
+            <h3 id="genie-title">Genie NGO</h3>
+            <p>An image-rich public website presenting regenerative agriculture, community programmes, impact and participation routes.</p>
+            <div class="card-links"><a href="https://genie.ngo/" target="_blank" rel="noopener">Open website</a></div>
+          </div>
+        </article>
+      </div>
+
+      <p class="empty-state" id="empty-state" hidden>No projects match this filter.</p>
+    </section>
+
+    <section class="experience" aria-labelledby="experience-title">
+      <div>
+        <p class="eyebrow">Selected experience</p>
+        <h2 id="experience-title">Engineering grounded in operating problems</h2>
+      </div>
+      <div class="experience-list">
+        <p><strong>Hospitality technology</strong><span>PMS and OTA reconciliation, browser automation and operational data pipelines.</span></p>
+        <p><strong>Small-business automation</strong><span>Accounting, marketplace invoicing, returns and inventory workflows used in real operations.</span></p>
+        <p><strong>Low-resource language technology</strong><span>A Flutter Ladakhi translation prototype and corpus-engineering work.</span></p>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <span>Yagyaansh Khaneja</span>
+    <span><a href="../portfolio/">Selected work</a> · <a href="mailto:contact@yagyaansh.com">contact@yagyaansh.com</a></span>
+  </footer>
 </body>
 </html>
