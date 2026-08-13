@@ -142,6 +142,15 @@ h3 { margin-bottom: 18px; font-size: 2.8rem; }
   pointer-events: none;
 }
 
+.project-preview > img {
+  position: absolute;
+  inset: 34px 0 0;
+  width: 100%;
+  height: calc(100% - 34px);
+  object-fit: cover;
+  object-position: top center;
+}
+
 .preview-link {
   position: absolute;
   right: 14px;
