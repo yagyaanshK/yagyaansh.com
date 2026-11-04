@@ -12,8 +12,8 @@
 </head>
 <body class="doc">
 <nav class="top" aria-label="Breadcrumb">
-  <a href="../../index.html" title="Yagyaansh Khaneja">yagyaansh.com</a><span class="crumb" aria-hidden="true">/</span>
-  <a href="../../projects.html" title="Projects">Projects</a><span class="crumb" aria-hidden="true">/</span>
+  <a href="../../index.html" title="Yagyaansh Khaneja">yagyaansh.com</a><span class="crumb">/</span>
+  <a href="../../projects.html" title="Projects">Projects</a><span class="crumb">/</span>
   <a href="index.html" title="Pendulum Lab">Pendulum Lab</a>
 </nav>
 <main>
@@ -101,7 +101,7 @@
 <li>A servo <strong>release</strong> command: no pulses, so the servo goes limp.</li>
 <li>A servo <strong>home</strong> stored in EEPROM, so the arm powers up pointing straight down.</li>
 </ul>
-<p><strong>Software</strong> (Python, 89 tests, CI on every push):</p>
+<p><strong>Software</strong> (Python, 89 automated tests, run before every push):</p>
 <ul>
 <li><strong>Model:</strong> a rigid pendulum on an accelerating pivot, with viscous, Coulomb and quadratic damping; the servo is a delayed second-order position loop with rate and acceleration limits.</li>
 <li><strong>Identification:</strong> a windowed simulation-error fit with Gaussian priors and a Laplace posterior (numba, 1–5 s per fit).</li>
@@ -470,7 +470,8 @@
 <p>See the README (&quot;Running the experiments&quot;) and <a href="test_plan.html"><code>test_plan.md</code></a>, which covers the session routine and every command. <code>python analysis/hw_results.py</code>, <code>analysis/e3_hw.py</code> and <code>analysis/h3_hw.py</code> rebuild every hardware table and figure in this report from the logged runs.</p>
 </main>
 <footer>
-  <p>Pendulum Lab &middot; Yagyaansh Khaneja &middot; 2026. Every number on these pages comes from a logged run.
+  <p>Pendulum Lab &middot; Yagyaansh Khaneja &middot; 2026.
+  Every number on these pages comes from a logged run.
   The source code is in a private repository.</p>
   <p><a href="index.html">Overview</a> &middot; <a href="twin.html">3D replay</a> &middot;
   <a href="report.html">Technical report</a> &middot; <a href="report.pdf">PDF</a></p>

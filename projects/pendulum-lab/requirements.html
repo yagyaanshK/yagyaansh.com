@@ -12,8 +12,8 @@
 </head>
 <body class="doc">
 <nav class="top" aria-label="Breadcrumb">
-  <a href="../../index.html" title="Yagyaansh Khaneja">yagyaansh.com</a><span class="crumb" aria-hidden="true">/</span>
-  <a href="../../projects.html" title="Projects">Projects</a><span class="crumb" aria-hidden="true">/</span>
+  <a href="../../index.html" title="Yagyaansh Khaneja">yagyaansh.com</a><span class="crumb">/</span>
+  <a href="../../projects.html" title="Projects">Projects</a><span class="crumb">/</span>
   <a href="index.html" title="Pendulum Lab">Pendulum Lab</a>
 </nav>
 <main>
@@ -297,11 +297,17 @@ Any change after freezing is recorded in the change log at the bottom, together 
 <td><strong>v1.1 applied (owner decision).</strong> R-I1, H1 and go/no-go item 3 are revised as shown above; the v1.0 wording is kept. The revisions are pre-registered for the hardware campaign (E3, E5), for which no data exists yet. Simulation results are reported against both versions and labelled as a post-hoc finding.</td>
 <td>E2 simulation (60 units, engineering log 2026-09-27 M3). Near 1 Hz only the servo's combined delay is identifiable: within 5% in 100% of units, while ω_n and dead time individually are within 5% in only 33–50% and 13–18%. v1.0 R-I1 fails for every protocol. Revised R-I1 (with damping gated at 20%): D-optimal 72%, limited by μ. Revised gate item 3 (κ and combined delay only): met, both within 5% in 100% of units. v1.0 H1: 40% [95% CI 28–52%], not supported. With a time-to-within-10%-of-floor comparison: D-optimal median 5 s vs chirp 15 s (paired Wilcoxon p ≈ 2e-11).</td>
 </tr>
+<tr>
+<td>2026-11-05</td>
+<td><strong>R-R3: the GitHub Actions workflow was removed (owner decision: no Actions minutes).</strong> The criterion keeps its wording; the same lint + tests + simulation smoke run are now run locally before every push (<code>docs/publishing.md</code>, engineering log 2026-11-05). It was green on every push up to the removal.</td>
+<td>GitHub Actions minutes are billed on a private repository; the checks do not need hosted runners.</td>
+</tr>
 </tbody>
 </table></div>
 </main>
 <footer>
-  <p>Pendulum Lab &middot; Yagyaansh Khaneja &middot; 2026. Every number on these pages comes from a logged run.
+  <p>Pendulum Lab &middot; Yagyaansh Khaneja &middot; 2026.
+  Every number on these pages comes from a logged run.
   The source code is in a private repository.</p>
   <p><a href="index.html">Overview</a> &middot; <a href="twin.html">3D replay</a> &middot;
   <a href="report.html">Technical report</a> &middot; <a href="report.pdf">PDF</a></p>
