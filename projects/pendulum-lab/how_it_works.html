@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="This document explains the system from the physics up, in the order the data flows: rig → camera → timing → model → identification → experiment design → esti...">
+<meta name="author" content="Yagyaansh Khaneja">
+<link rel="icon" type="image/x-icon" href="../../assets/images/art.svg">
+<title>How it works: every part of the experiment, and why it is built that way | Pendulum Lab | Yagyaansh Khaneja</title>
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+<link rel="stylesheet" href="site.css">
+</head>
+<body class="doc">
+<nav class="top" aria-label="Breadcrumb">
+  <a href="../../index.html" title="Yagyaansh Khaneja">yagyaansh.com</a><span class="crumb" aria-hidden="true">/</span>
+  <a href="../../projects.html" title="Projects">Projects</a><span class="crumb" aria-hidden="true">/</span>
+  <a href="index.html" title="Pendulum Lab">Pendulum Lab</a>
+</nav>
+<main>
+<h1 id="how-it-works-every-part-of-the-experiment-and-why-it-is-built-that-way">How it works: every part of the experiment, and why it is built that way</h1>
+<p>This document explains the system from the physics up, in the order the data flows: rig → camera → timing → model → identification → experiment design → estimation → control → statistics. Each section covers <strong>what</strong> the part does, <strong>how</strong> it works, <strong>why</strong> it is designed that way, and <strong>what went wrong</strong> on the real rig. Numbers are from the logged runs; see <a href="report.html"><code>report.md</code></a> for the results and <a href="engineering_log.html"><code>engineering_log.md</code></a> for the day-by-day record.</p>
+<hr />
+<h2 id="1-the-physical-setup">1. The physical setup</h2>
+<p><strong>What:</strong> a 30 cm steel ruler hangs from a pivot at the tip of an 8.1 cm arm on an SG90 hobby servo. The servo can only rotate the arm, so it moves the pendulum's <em>pivot</em> along a small arc.</p>
+<p><strong>Why a moving pivot:</strong> this is how you pump a swing. Moving the pivot sideways at the right moment does work on the pendulum, adding or removing energy. It is the same physics as a child pumping a playground swing, or a crane operator damping a hanging load. It also makes the problem interesting: the actuator acts on the pendulum only indirectly, through the pivot's acceleration, and it is a cheap, imperfect position servo with its own lag and dead band.</p>
+<p><strong>The other parts, and why each is there:</strong></p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Part</th>
+<th>Why</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Green paper dot on the pivot, pink dot on the rod</strong></td>
+<td>The camera measures angles from these two points. Matte paper avoids glare. The two colours make the dots distinguishable.</td>
+</tr>
+<tr>
+<td><strong>Separate 5 V supply for the servo</strong> (breadboard power module), with grounds joined</td>
+<td>Powered from the UNO, the servo's start-up current spikes dropped the board's 5 V by 0.7 V and risked resets. The separate supply reduced the dip to 0.02 V. The shared ground makes the signal voltage meaningful.</td>
+</tr>
+<tr>
+<td><strong>Light gate</strong> (white LED + photoresistor at the bottom of the swing)</td>
+<td>An <strong>independent</strong> timing reference. The microcontroller timestamps each time the rod blocks the beam, using its own clock, not the camera.</td>
+</tr>
+<tr>
+<td><strong>Red &quot;latency&quot; LED</strong> in the camera's view</td>
+<td>The board switches it and records exactly when. The camera sees it later. The difference is the camera's delay.</td>
+</tr>
+<tr>
+<td><strong>Printed protractor</strong></td>
+<td>A reference for the camera's static angle accuracy (E1a).</td>
+</tr>
+<tr>
+<td><strong>Camera:</strong> a Sony α7 IV streaming over USB, 1280×720 at 30 fps</td>
+<td>The camera available. It turned out to have ≈ 147 ms of delay and to overheat after 20–25 min of streaming.</td>
+</tr>
+</tbody>
+</table></div>
+<hr />
+<h2 id="2-the-model-what-the-software-believes-the-physics-is">2. The model: what the software believes the physics is</h2>
+<p><strong>Pendulum on an accelerating pivot.</strong> Take the pendulum angle θ from the downward vertical. If the pivot accelerates by (a_x, a_y), then in the pivot's frame the pendulum feels an extra &quot;fictitious&quot; force, and</p>
+<pre><code>θ'' = −κ [ (g + a_y) sin θ + a_x cos θ ]  −  β θ'  −  μ tanh(θ'/ε)  −  η θ' |θ'|
+</code></pre>
+<ul>
+<li>
+<p><strong>κ = 1/L_eq.</strong> A real rod is not a point mass on a string. κ = m·l_c / I, the &quot;equivalent length&quot; of a simple pendulum with the same behaviour. It sets the natural frequency, ω₀ = √(gκ). Measured: κ = 4.61 m⁻¹, so L_eq ≈ 21.7 cm and the period ≈ 0.934 s.</p>
+</li>
+<li>
+<p><strong>(g + a_y) sin θ:</strong> gravity, modified by vertical pivot acceleration (like being in a lift).</p>
+</li>
+<li>
+<p><strong>a_x cos θ:</strong> horizontal pivot acceleration. <strong>This is how the servo acts on the pendulum.</strong></p>
+</li>
+<li>
+<p><strong>Three damping laws:</strong></p>
+<ul>
+<li>β: viscous, proportional to speed, like oil;</li>
+<li>μ: Coulomb, dry friction of constant size, smoothed by tanh so the equation stays differentiable;</li>
+<li>η: quadratic, air drag, proportional to speed².</li>
+</ul>
+<p>Which law describes the rig is hypothesis H3.</p>
+</li>
+</ul>
+<p><strong>The pivot's motion.</strong> The pivot sits at p = r (sin φ, −cos φ), with r = 8.1 cm and φ the arm angle. Its acceleration follows by differentiating twice: a_x = r(φ'' cos φ − φ'² sin φ), and similarly for a_y.</p>
+<p><strong>The servo model.</strong> An SG90 is a position servo: it drives toward the commanded angle, with limits. It is modelled as a second-order position loop with:</p>
+<ul>
+<li>natural frequency ω_n and damping ζ;</li>
+<li>a dead time (the command takes a while to start acting);</li>
+<li>rate and acceleration limits.</li>
+</ul>
+<p><strong>Why second order and not first order:</strong> with a first-order lag, the arm's <em>velocity</em> jumps whenever the command steps. That makes the pivot acceleration infinite for an instant, and the simulated pendulum receives an unphysical kick.</p>
+<p><strong>Integration:</strong> fixed-step 4th-order Runge–Kutta (RK4). Tests check the simulated period against the exact elliptic-integral solution, energy conservation without damping, 4th-order convergence, and the resonance curve.</p>
+<hr />
+<h2 id="3-perception-from-pixels-to-angles">3. Perception: from pixels to angles</h2>
+<p><strong>Finding the dots.</strong> Each frame is converted to HSV (hue, saturation, value). A pixel is &quot;green&quot; or &quot;pink&quot; if it falls inside a hue/saturation/brightness box. Touching pixels form blobs. The centroid, the average position of the blob's pixels, is the dot's position. Averaging over hundreds of pixels gives a <strong>sub-pixel</strong> position: at rest the jitter is about 0.1 px, which corresponds to 0.024° of rod angle.</p>
+<p><strong>Why colour alone was not enough, and the search region.</strong> On the real rig, colour matched the wrong objects: a green tape roll, the red latency LED, a red strip below the sheet. The sketch-pen pink reads as <em>red</em> (hue 0–4), the same as those objects. The fix uses geometry:</p>
+<ul>
+<li>the green dot can only be on a circle of radius r around the servo axis;</li>
+<li>the pink dot can only be at the rod's length from the green dot, below it.</li>
+</ul>
+<p>Only blobs in those places are accepted, and <strong>the one closest to the expected distance wins, not the biggest</strong>. A big red strip once beat the small pink dot on size alone.</p>
+<p><strong>Angles without knowing the scale.</strong> θ = atan2(Δu, Δv) of the vector from the green dot to the pink dot, after undoing the camera's roll. The pixel scale and the rod length cancel: the angle needs only the <em>direction</em>. So a zoom change does not change the measured angle.</p>
+<p><strong>Calibration from the dots themselves:</strong></p>
+<ol>
+<li><strong>Servo axis:</strong> the servo sweeps ±30° in steps. The green dot traces an arc, and a least-squares circle fit gives the arc's centre (the servo axis) and radius in pixels (fit error 0.07–0.23 px).</li>
+<li><strong>Camera roll:</strong> the hanging rod points along gravity, so its measured direction at rest is &quot;straight down&quot; for the camera.</li>
+<li><strong>Servo map:</strong> the arm angle measured at each pulse width gives the servo's gain (≈ 0.082–0.086°/µs), direction, and zero offset (&quot;trim&quot;).</li>
+<li>The zero offset is also written to the board's memory, so the arm powers up pointing straight down.</li>
+</ol>
+<p><strong>Why a calibration <em>check</em>:</strong> the camera re-zoomed or shifted after restarts (its stabilisation re-centres at power-up). A 15 s check compares the live feed with the saved calibration: green-dot position, rod length in pixels, resting angle, and arm angles at 0 and ±20°. Only on failure is a full recalibration run.</p>
+<hr />
+<h2 id="4-time-the-hidden-variable">4. Time: the hidden variable</h2>
+<p>Control and identification depend on knowing <strong>when</strong> each frame was taken, not just what it shows.</p>
+<p><strong>Camera latency (E1c).</strong> The board switches the red LED at random times and reports each switch time over serial. The software finds the first frame that shows the new state. The difference between the two times is the delay: a median of ≈ 150–164 ms, of which ≈ 147 ms is the capture-to-arrival latency. Each frame's capture time is then estimated as arrival time − 147 ms − half the exposure.</p>
+<p><strong>Clock synchronisation.</strong> The board's clock and the laptop's clock differ in offset <em>and</em> rate: the board's ceramic resonator runs ≈ 0.009% fast. Pings measure round trips, and fitting offset and rate to the fastest round trips maps board time onto laptop time, to ≈ 2 ms.</p>
+<p><strong>Timestamp jitter.</strong> Frames arrive with ≈ 10 ms of jitter and occasional 60–70 ms gaps. At the bottom of a 35° swing the rod moves at ≈ 240°/s, so a 10 ms timing error looks like a 2.4° angle error. This mattered a great deal; see §7.</p>
+<p><strong>Driver choice.</strong> Media Foundation was 10 ms faster than DirectShow, but it delivered duplicate frames and stuttered. DirectShow is used, and exact duplicate frames (bit-identical centroids) are dropped.</p>
+<p><strong>Validation against an independent sensor (E1b).</strong> The swing <em>period</em> measured by the camera (from zero crossings) is compared with the period from the light gate (the board's clock). A constant delay cancels in a period, so this checks that the camera's timing is <em>consistent</em>. They agree within 0.07–0.09%.</p>
+<hr />
+<h2 id="5-identification-learning-the-physics-from-data">5. Identification: learning the physics from data</h2>
+<p><strong>Goal:</strong> find κ, the damping coefficients and the servo parameters that make the model reproduce the recorded motion.</p>
+<p><strong>Simulation-error fit in windows (multiple shooting).</strong></p>
+<ul>
+<li>The record is cut into 3 s windows.</li>
+<li>Each window gets its own unknown starting state (angle, speed, arm angle, arm speed), estimated along with the physics parameters.</li>
+<li>From that start, the model is simulated forward with the <strong>logged servo commands</strong>, and the simulated θ and φ are compared with the camera's.</li>
+<li>The optimiser (bounded least squares) adjusts everything to minimise the squared differences.</li>
+</ul>
+<p><strong>Why windows:</strong> a single 30 s simulation is extremely sensitive to the initial state and to small parameter errors, because the pendulum is nonlinear and lightly damped. The optimiser then gets lost. Short windows keep each prediction short enough to be well behaved.</p>
+<p><strong>Priors and uncertainty.</strong> Every parameter has a Gaussian prior: what was known before the experiment, such as κ from the ruler's geometry (4.5 ± 1.0). The prior terms are added to the fit as extra residuals. At the optimum, the curvature of the objective gives a <strong>posterior covariance</strong> (the Laplace approximation). So every fit reports not just values but uncertainties: for example, κ = 4.610 ± 0.002.</p>
+<p><strong>Speed.</strong> The model is compiled with numba, and all windows and finite-difference perturbations are simulated in one batch. A fit takes 1–5 s, down from 70 s at first. That matters because the experiment-design loop refits after every 5 s segment.</p>
+<p><strong>What is identifiable.</strong> Near the pendulum's 1 Hz, only the servo's <em>total</em> phase delay is well determined, not its bandwidth and dead time separately. Many combinations of the two give the same delay at 1 Hz. This showed up in simulation and led to the v1.1 wording of R-I1.</p>
+<p><strong>Scoring on held-out data.</strong></p>
+<ul>
+<li>A model is judged on data it never saw: three held-out recordings (a multisine, a free decay from 25°, a burst).</li>
+<li>The score is the <strong>held-out 3 s NRMSE</strong>. From each window's first 0.5 s, estimate the state; predict the next 3 s open loop; divide the prediction error by the signal's RMS.</li>
+<li>The <strong>noise floor</strong> is the score of the best available model: one fit to all data pooled.</li>
+</ul>
+<hr />
+<h2 id="6-experiment-design-choosing-the-next-experiment-h1">6. Experiment design: choosing the next experiment (H1)</h2>
+<p><strong>The question:</strong> given what is known so far, which 5 s excitation will teach the most?</p>
+<p><strong>Fisher information.</strong></p>
+<ul>
+<li>For a candidate excitation, the model predicts how the measurements would <em>change</em> if each parameter changed slightly: the <strong>sensitivities</strong>, computed by finite differences.</li>
+<li>The Fisher information matrix F collects these sensitivities, weighted by the measurement noise. Large F in a direction means that direction of parameter space would be pinned down well.</li>
+<li><strong>D-optimality:</strong> pick the candidate that maximises log det(P⁻¹ + F), where P is the current posterior covariance. This shrinks the <em>volume</em> of the uncertainty ellipsoid the most.</li>
+</ul>
+<p><strong>Posterior averaging.</strong> The sensitivities depend on the parameters, which are uncertain. So the criterion is averaged over 8 parameter samples drawn from the current posterior. That makes the choice robust to not yet knowing the truth. The start state of each segment is a nuisance and is removed mathematically (a Schur complement), so it does not count as information.</p>
+<p><strong>The library.</strong> Candidates are:</p>
+<ul>
+<li>sines at 2°, 4° and 6°, at frequency ratios 0.5–2 of the current estimate of the natural frequency;</li>
+<li>two-tone mixes;</li>
+<li>short resonant bursts;</li>
+<li>&quot;hold still&quot;.</li>
+</ul>
+<p><strong>Safety.</strong> A candidate is rejected if any posterior sample predicts |θ| &gt; 60°, or a swing larger than 45° at the segment's end, which would leave the next segment no safe option. A single 60.6° violation in simulation led to that second, &quot;terminal&quot;, constraint.</p>
+<p><strong>The loop:</strong> design → run 5 s → refit → update the posterior → design again, for a 30 s budget.</p>
+<p><strong>Two real-time problems specific to hardware:</strong></p>
+<ol>
+<li><strong>Time keeps running</strong> while the laptop fits and designs (1.5–6 s). The command record is padded with &quot;servo held&quot; for the pause, so the model's timeline stays true.</li>
+<li><strong>Unfair free data.</strong> The frames captured during those pauses were being fitted too, and D-optimal (which thinks longer) got more of them. They are now excluded, so both methods are judged on their 30 s of excitation only.</li>
+</ol>
+<p><strong>A known flaw found afterwards</strong> (the owner saw it as servo jerks): each new segment started at 0° while the servo was still holding the previous segment's last angle. So D-optimal runs contain 4–6 instantaneous steps of 3–8.8°. The steps are logged commands, so the fit models them correctly, but they are extra excitation only D-optimal received. The fix: ramp segments in and out, and slew-limit open-loop commands.</p>
+<p><strong>Result:</strong> D-optimal reached near-floor prediction in a median of 10 s, against 15 s for the chirp, and was faster in 5 of 6 pairs. The target was 2×, so H1 is not supported. <strong>Why smaller than in simulation:</strong> the first design is made from the prior. It is always a strong resonant shake, which generalises worse than the chirp's gentle start, and the 5 s segments make the timing coarse.</p>
+<hr />
+<h2 id="7-estimation-knowing-the-state-now-from-frames-that-are-150-ms-old">7. Estimation: knowing the state <em>now</em> from frames that are 150 ms old</h2>
+<p><strong>The extended Kalman filter (EKF).</strong></p>
+<ul>
+<li><strong>State:</strong> [θ, θ', φ, φ'].</li>
+<li><strong>Predict step:</strong> propagate the state (and its uncertainty) through the model, using the servo commands actually sent.</li>
+<li><strong>Update step:</strong> when a frame arrives, correct the state toward the measured θ and φ, weighted by how much the filter trusts the prediction versus the measurement.</li>
+</ul>
+<p>&quot;Extended&quot; means that the nonlinear model is linearised around the current estimate for the uncertainty calculation.</p>
+<p><strong>Delayed measurements.</strong> A frame arriving now shows the pendulum as it was ≈ 147 ms ago. The filter therefore propagates to the frame's <strong>capture time</strong> and fuses it there, keeping the command history so that the servo's past motion is modelled correctly. Late or out-of-order frames are skipped.</p>
+<p><strong>Predicting to &quot;now&quot;, and beyond.</strong> The controller needs the state at the moment its command will take effect. So after each update the filter predicts forward by:</p>
+<ul>
+<li>the actuation lag: the servo's dead time + 2ζ/ω_n ≈ 31 ms;</li>
+<li>half a control period;</li>
+<li>the delay of the command filter (≈ 53 ms).</li>
+</ul>
+<p><strong>Why this matters: H2.</strong> Without it the controller acts on a state that is ≈ 230 ms stale. That is ≈ 90° of the 0.93 s swing, so its pushes land at the wrong time.</p>
+<p><strong>Timing-aware measurement noise.</strong> A frame's angle is uncertain for two reasons: pixel noise (tiny), and <em>when</em> the frame was really taken (≈ 10 ms of jitter). The second effect scales with speed: at 240°/s, 10 ms is 2.4°. The filter's measurement variance is therefore σ² = σ_pixel² + (rate × 10 ms)². This matters in two ways:</p>
+<ul>
+<li>it stops the filter from over-reacting to jittery frames at the bottom of the swing, which had made the controller chatter;</li>
+<li>it stops the outlier gate from rejecting good frames, which had caused false safety stops.</li>
+</ul>
+<p><strong>Outlier gate.</strong> A measurement is rejected only if it is both &gt; 6 standard deviations <strong>and</strong> &gt; 5° away from the prediction. That catches a marker mis-detection or a reappearing marker, but never a small calibration offset.</p>
+<hr />
+<h2 id="8-control-pumping-the-swing-to-a-target-amplitude">8. Control: pumping the swing to a target amplitude</h2>
+<p><strong>Energy shaping.</strong> The pendulum's energy (per unit inertia) is E = ½θ'² − gκ cos θ. A swing of amplitude A has energy E* = −gκ cos A. From the equation of motion, a horizontal pivot acceleration a_x changes the energy at the rate dE/dt = −κ a_x θ' cos θ. So choosing</p>
+<pre><code>a_x = −c · θ' · cos θ        (c &gt; 0 pumps energy in, c &lt; 0 takes it out)
+</code></pre>
+<p>always moves energy in the right direction, and <strong>c is set by how far the energy is from its target</strong>:</p>
+<pre><code>c = c_ff + k_E · (E* − E)/(gκ) + integral term
+</code></pre>
+<ul>
+<li><strong>c_ff (feed-forward)</strong> cancels the identified damping at the target amplitude, so that the P term only corrects errors.</li>
+<li><strong>The integral term</strong> removes a lingering shortfall. On the rig it acts within 6° of the target, which was needed because the SG90's dead band swallowed the small corrections at 15°.</li>
+</ul>
+<p><strong>From acceleration to a servo angle.</strong> The servo sets a position, not an acceleration. Near resonance the pivot moves roughly sinusoidally, so a_x ≈ −ω₀² x, with x = r sin φ. Hence φ_cmd = asin(−a_x / (r ω₀²)), capped at ±10°.</p>
+<p><strong>Start-up.</strong> Near rest, the sign of θ' is mostly noise, so below 4° the controller plays an open-loop resonant sine until the swing is measurable.</p>
+<p><strong>Smoothing and limits:</strong></p>
+<ul>
+<li><strong>Slew limit (200°/s):</strong> normal control needs ≈ 63°/s, so the limit only stops bursts.</li>
+<li><strong>3 Hz command low-pass filter:</strong> it cut the chatter (servo reversals at 35° went from ≈ 14/s to ≈ 5/s). Its delay is added to the prediction horizon, so the pushes stay in phase.</li>
+</ul>
+<p><strong>Safety stops:</strong> the servo holds φ = 0 and the trial ends if:</p>
+<ul>
+<li>|θ| &gt; 70°;</li>
+<li>the camera sends nothing for 0.5 s;</li>
+<li>the pink marker is lost for 0.25 s;</li>
+<li>the filter rejects 5 frames in a row.</li>
+</ul>
+<p><strong>Settling between trials.</strong> A servo &quot;holding&quot; at 0° is not passive. The swinging rod pushes the arm within the servo's dead band, the servo pushes back late, and the result pumps energy: a limit cycle stuck at ≈ 13° for over a minute. The owner spotted this. The fix: a firmware <strong>release</strong> command (no pulses, so the servo is limp) until the camera sees the pendulum at rest, then re-engage at 0°.</p>
+<p><strong>H2 result (the ablation).</strong> The same controller, without the servo model and without prediction to now, reached no target (0/7). Its error was 12.0°, against 0.57° for the full controller: 95% more error without the model. <strong>Why it fails:</strong> it ignores ≈ 230 ms of delay (camera + servo + filter), ≈ 90° of the swing. The push is proportional to the rod's velocity, and a quarter-period delay makes the push nearly uncorrelated with the velocity, so almost no net energy goes in.</p>
+<hr />
+<h2 id="9-statistics-why-the-conclusions-can-be-trusted">9. Statistics: why the conclusions can be trusted</h2>
+<ul>
+<li><strong>Pre-registration.</strong> Hypotheses, pass criteria and the go/no-go gate were written in <a href="requirements.html"><code>requirements.md</code></a> before any hardware data existed. One revision (v1.1) came after the simulation campaign and before hardware identification; it is labelled as such, with the v1.0 wording kept.</li>
+<li><strong>Interleaving.</strong> Competing methods (chirp vs D-optimal; full vs ablated controller) alternate in a random order within blocks. That way, slow drift (temperature, pivot wear, camera restarts) affects both equally.</li>
+<li><strong>Paired tests.</strong> Comparisons are made <em>within</em> blocks, with the paired Wilcoxon signed-rank test. It does not assume normal data. With n pairs all in the same direction, the smallest possible two-sided p is 2/2ⁿ: 0.016 for 7 pairs, 0.0625 for 5.</li>
+<li><strong>Exact confidence intervals</strong> for pass rates (Clopper–Pearson). 19/19 gives 82–100% at 95% confidence, so the lower bound clears the 80% requirement.</li>
+<li><strong>Held-out data</strong> is never used for fitting. A leak found in the H3 analysis was fixed before any number was reported.</li>
+<li><strong>Negative results are reported:</strong> H1, H3, R-S3 and R-S5 are all reported as not met. That is the point of pre-registration.</li>
+</ul>
+<hr />
+<h2 id="10-how-the-pieces-fit-one-control-trial-end-to-end">10. How the pieces fit: one control trial, end to end</h2>
+<ol>
+<li><strong>Settle:</strong> the servo is released; the camera waits until the swing is &lt; 0.5° for 3 s; the servo re-engages at vertical.</li>
+<li><strong>Every 20 ms (50 Hz):</strong>
+<ol>
+<li>new frames are converted to marker centroids;</li>
+<li>angles are computed;</li>
+<li>each frame is dated at its capture time and fused into the EKF;</li>
+<li>the EKF predicts ≈ 95 ms ahead (servo lag 31 ms + half a period 10 ms + filter delay 53 ms);</li>
+<li>the energy law gives a pivot acceleration, which becomes a servo angle;</li>
+<li>the angle is slew-limited and filtered, then sent as a pulse width over serial;</li>
+<li>every command and every board acknowledgement is logged.</li>
+</ol>
+</li>
+<li><strong>After 30 s:</strong> release the servo and record the free decay until rest (data for the damping analysis).</li>
+<li><strong>Scoring:</strong> swing peaks from the camera's θ give the settle time, the RMS error in the last 10 s and the overshoot. <code>analysis/hw_results.py</code> aggregates every trial into <a href="results/e5_hardware.html"><code>results/e5_hardware.md</code></a>.</li>
+</ol>
+</main>
+<footer>
+  <p>Pendulum Lab &middot; Yagyaansh Khaneja &middot; 2026. Every number on these pages comes from a logged run.
+  The source code is in a private repository.</p>
+  <p><a href="index.html">Overview</a> &middot; <a href="twin.html">3D replay</a> &middot;
+  <a href="report.html">Technical report</a> &middot; <a href="report.pdf">PDF</a></p>
+</footer>
+</body>
+</html>

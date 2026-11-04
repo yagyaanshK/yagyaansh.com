@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="Pendulum Lab: a camera-tracked pendulum on a hobby servo that runs its own experiments, identifies its physics, compensates 150 ms of camera latency and controls its swing. Results, 3D replay and technical report.">
+<meta name="author" content="Yagyaansh Khaneja">
+<link rel="icon" type="image/x-icon" href="../../assets/images/art.svg">
+<title>Pendulum Lab | Yagyaansh Khaneja</title>
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+<link rel="stylesheet" href="site.css">
+</head>
+<body class="overview">
+<nav class="top" aria-label="Breadcrumb">
+  <a href="../../index.html" title="Yagyaansh Khaneja">yagyaansh.com</a><span class="crumb" aria-hidden="true">/</span>
+  <a href="../../projects.html" title="Projects">Projects</a><span class="crumb" aria-hidden="true">/</span>
+  Pendulum Lab
+</nav>
+<main>
+  <h1>Pendulum Lab: a self-driving pendulum experiment</h1>
+  <p class="byline">Yagyaansh Khaneja<br>B.Tech Engineering Physics, Indian Institute of Technology Roorkee</p>
+  <p class="date">September 2026</p>
+
+  <p class="lede">A camera watches a pendulum that hangs from the arm of a hobby servo. With no human in the loop, the rig runs its own experiments to identify the pendulum's physics, choosing each experiment by Bayesian D-optimal design; estimates the state from video that arrives about 150&nbsp;ms late; and uses the identified model to control the swing amplitude. On the physical rig the controller met its target in 19 of 19 trials, modelling the servo and the latency cut the amplitude error by 95%, and the camera's timing agreed with an independent light gate within 0.1%. The pre-registered 2× speed-up from self-chosen experiments was not reached (about 1.5×), and the damping law could not be identified. The rig was built in four days from parts already owned.</p>
+
+  <div class="video-placeholder"><p>The demonstration video (1:48) is being uploaded. Until then, the <a href="twin.html">3D replay</a> shows the same runs.</p></div>
+
+  <p class="links">
+    <a href="twin.html">Interactive 3D replay</a>
+    <a href="report.html">Technical report</a>
+    <a href="report.pdf">Report (PDF)</a>
+    <a href="rig_setup.html">3D build guide</a>
+  </p>
+
+  <div class="stats">
+    <div class="stat"><b>19/19</b><span>closed-loop trials reached and held the target swing (±2°)</span></div>
+    <div class="stat"><b>−95%</b><span>amplitude error with the servo and latency model, vs without</span></div>
+    <div class="stat"><b>0.1%</b><span>camera period vs an independent light gate</span></div>
+    <div class="stat"><b>1.5×</b><span>faster identification with self-chosen experiments (target 2×: not met)</span></div>
+  </div>
+
+  <h2>1. What it is</h2>
+  <p>A camera watches a pendulum that hangs from the arm of a hobby servo. With no human in the loop, the system:</p>
+  <ol>
+    <li><strong>identifies the pendulum's physics</strong> from its own experiments, choosing each next experiment by Bayesian D-optimal design, under a safety constraint;</li>
+    <li><strong>estimates the pendulum's state</strong> from video frames that arrive about 150&nbsp;ms late, using an extended Kalman filter with delayed measurements and forward prediction;</li>
+    <li><strong>controls the swing amplitude</strong> with an energy-shaping controller built on the identified model.</li>
+  </ol>
+  <p>The rig is an Arduino UNO, an SG90 micro-servo, a 30&nbsp;cm steel ruler as the pendulum, a breadboard power module, a photoresistor light gate, and a Sony α7&nbsp;IV used as a USB webcam. The hypotheses and pass/fail criteria were written down before any hardware data existed, and every failure is reported against them.</p>
+
+  <figure>
+    <img src="media/rig_front.jpg" alt="The pendulum rig: a steel ruler hangs from a yellow servo arm in front of a printed protractor sheet; the Arduino and wiring sit on the shelf above." width="1600" height="900">
+    <figcaption>The rig from the camera's side. The ruler hangs from the servo arm (top) in front of a printed protractor sheet. The camera tracks the green marker on the pivot and the pink marker on the rod.</figcaption>
+  </figure>
+
+  <h2>2. Results on the physical rig</h2>
+  <div class="table-wrap">
+  <table>
+    <thead><tr><th>Question</th><th>Result</th></tr></thead>
+    <tbody>
+      <tr class="result-pass"><td>Can the identified model control the swing?</td><td><strong>Yes: 19/19 trials</strong> at 15°, 25° and 35° reach and stay within ±2° in 4–12&nbsp;s (95% CI 82–100%, requirement ≥&nbsp;80%).</td></tr>
+      <tr class="result-pass"><td>Is the camera's timing trustworthy?</td><td><strong>Yes:</strong> the swing period from the camera matches an independent light gate, timed by the microcontroller's clock, within 0.07–0.09%.</td></tr>
+      <tr class="result-pass"><td>Does the identified model agree with an independent measurement?</td><td><strong>Yes:</strong> the identified model gives a small-swing period of 0.934&nbsp;s; the light gate measured 0.933&nbsp;s.</td></tr>
+      <tr class="result-pass"><td>Does modelling the servo and the latency improve control? (H2)</td><td><strong>Yes: 95% lower amplitude error</strong> (median 0.57° against 12.0°, 7 interleaved pairs, p&nbsp;=&nbsp;0.016). Without the model the controller never reached a target (0/7).</td></tr>
+      <tr class="result-fail"><td>Do self-chosen experiments identify the system twice as fast as a standard sweep? (H1)</td><td><strong>Not as pre-registered.</strong> D-optimal design reached the held-out noise floor in a median of 10&nbsp;s against 15&nbsp;s for a chirp: faster in 5 of 6 pairs, about 1.5× rather than 2× (p&nbsp;=&nbsp;0.06).</td></tr>
+      <tr class="result-fail"><td>Can the damping law be identified? (H3)</td><td><strong>No:</strong> viscous and quadratic damping are indistinguishable on held-out data (16 runs, p&nbsp;=&nbsp;0.43).</td></tr>
+      <tr class="result-fail"><td>Camera latency ≤&nbsp;150&nbsp;ms (go/no-go)</td><td><strong>Failed as measured:</strong> 151–164&nbsp;ms median. Control works regardless.</td></tr>
+      <tr class="result-fail"><td>Static angle accuracy ≤&nbsp;1°</td><td><strong>Failed as measured:</strong> 1.42° RMS against a hand-held ruler aligned by eye.</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p>The criteria were frozen before the hardware data. Three were revised once, after the simulation campaign and before any hardware identification; the revision is labelled in the <a href="requirements.html">requirements</a>, and every failure above is reported against the criterion as written.</p>
+
+  <figure>
+    <img src="figures/e5_hw_amplitude.png" alt="Swing amplitude against time for the closed-loop trials at 15, 25 and 35 degrees; every trial settles within the ±2 degree band.">
+    <figcaption>Closed-loop amplitude control on hardware, final configuration, targets 15°, 25° and 35°. Blue: the controller with the identified servo and latency model (19 trials), every one entering the ±2° band (grey) and staying there. Orange: the same controller without that model (7 trials), which never reaches a target. <a href="results/e5_hardware.html">Full results</a>.</figcaption>
+  </figure>
+  <figure>
+    <img src="figures/e3_hw_nrmse.png" alt="Held-out prediction error against experiment time for D-optimal and chirp excitation on hardware.">
+    <figcaption>Held-out prediction error, relative to the noise floor, against cumulative excitation time on hardware. Thick lines: medians of 8 units each for Bayesian D-optimal and chirp excitation; thin lines: individual units; dashed: 10% above the floor. <a href="results/e3_hardware.html">Full results</a>.</figcaption>
+  </figure>
+
+  <h2>3. What was built and debugged</h2>
+  <ul>
+    <li><strong>The whole stack:</strong> firmware, perception, the delayed-measurement estimator, grey-box identification, Bayesian experiment design, control, the statistics, and a 3D build guide. 89 automated tests.</li>
+    <li>A servo that browned out the board when powered from it.</li>
+    <li>A camera that overheated and silently re-zoomed after restarts; fixed with a 15&nbsp;s calibration check before every session.</li>
+    <li>A "holding" servo that kept pumping energy into the pendulum; fixed with a firmware command that makes it go limp.</li>
+    <li>Frame-timestamp jitter that made the controller chatter; fixed by making the estimator's trust depend on speed.</li>
+    <li>A bias in the experiment design itself (the smarter method got free data while it was "thinking"), caught and removed before the comparison was run.</li>
+  </ul>
+  <p><strong>The main lesson:</strong> on hardware the actuator matters more than the model of the pendulum. The remaining gap between simulation and reality comes from the servo's dead band and compliance, not from the physics of the swing.</p>
+
+  <h2>4. Next steps</h2>
+  <ul>
+    <li>an encoder as the angle reference;</li>
+    <li>a lower-latency camera;</li>
+    <li>modelling actuator compliance;</li>
+    <li>perturbation experiments in which the rig notices a change (added mass, a shorter rod) and re-identifies itself.</li>
+  </ul>
+
+  <h2 id="documents">5. Documents</h2>
+  <ul class="docs-list">
+    <li><a href="twin.html">Interactive 3D replay</a> &mdash; the rig as a digital twin, replaying logged runs; compare control with and without the latency model side by side.</li>
+    <li><a href="report.html">Technical report</a> (<a href="report.pdf">PDF</a>) &mdash; method, results, statistics, and what did not pass.</li>
+    <li><a href="how_it_works.html">How it works</a> &mdash; the estimator, the experiment design and the controller, explained.</li>
+    <li><a href="requirements.html">Requirements and hypotheses</a> &mdash; the pre-registered criteria, with the one labelled revision.</li>
+    <li><a href="test_plan.html">Test plan</a> &mdash; the session routine and every experiment.</li>
+    <li>Results: <a href="results/e5_hardware.html">closed-loop control</a>, <a href="results/e3_hardware.html">active design vs chirp</a>, <a href="results/h3_hardware.html">damping law</a>.</li>
+    <li><a href="hardware_setup.html">Hardware build guide</a> and <a href="rig_setup.html">3D build guide</a> &mdash; replicate the rig, wiring hole by hole.</li>
+    <li><a href="engineering_log.html">Engineering log</a> &mdash; the day-by-day record, failures included.</li>
+    <li><a href="code.html">Code overview</a> &mdash; the architecture and how the experiments are run. The source is in a private repository.</li>
+  </ul>
+</main>
+<footer>
+  <p>Pendulum Lab &middot; Yagyaansh Khaneja &middot; 2026. Every number on these pages comes from a logged run.</p>
+</footer>
+</body>
+</html>

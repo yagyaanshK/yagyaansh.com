@@ -1,0 +1,517 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pendulum Digital Twin</title>
+<style>
+  :root {
+    --bg: #eef0f3; --panel: rgba(255,255,255,0.88); --ink: #16181d; --ink-2: #555a64;
+    --line: #d8dbe1; --blue: #2a78d6; --orange: #eb6834; --band: #bfe0bf;
+    --stage: #7f848c;   /* neutral mid grey behind the 3D scene, in both themes: the white sheet stands out */
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #15171b; --panel: rgba(28,30,35,0.88); --ink: #f2f3f5; --ink-2: #b4b8c0;
+      --line: #33363d; --blue: #3987e5; --orange: #d95926; --band: #2c4a2c;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #15171b; --panel: rgba(28,30,35,0.88); --ink: #f2f3f5; --ink-2: #b4b8c0;
+    --line: #33363d; --blue: #3987e5; --orange: #d95926; --band: #2c4a2c;
+  }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--ink);
+    font: 14px/1.4 system-ui, -apple-system, "Segoe UI", sans-serif; overflow: hidden; }
+  #view { position: fixed; inset: 0; }
+  .ui { position: fixed; z-index: 3; background: var(--panel); border: 1px solid var(--line);
+    border-radius: 10px; padding: 10px 12px; backdrop-filter: blur(6px); }
+  #controls { left: 16px; top: 16px; max-width: calc(100vw - 32px); display: flex; flex-wrap: wrap;
+    gap: 8px; align-items: center; }
+  #controls select, #controls button { font: inherit; color: var(--ink); background: transparent;
+    border: 1px solid var(--line); border-radius: 7px; padding: 5px 9px; cursor: pointer; }
+  #controls button.on { background: var(--ink); color: var(--bg); }
+  #title { font-weight: 650; margin-right: 6px; }
+  #hud { left: 16px; bottom: 16px; right: 16px; display: grid; gap: 10px;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
+  #hud:empty { display: none; }
+  .card { display: grid; gap: 4px; }
+  .card .name { font-weight: 650; display: flex; align-items: center; gap: 8px; }
+  .swatch { width: 12px; height: 12px; border-radius: 3px; display: inline-block; }
+  .bar { position: relative; height: 14px; background: var(--line); border-radius: 4px; overflow: hidden; }
+  .bar .band { position: absolute; top: 0; bottom: 0; background: var(--band); }
+  .bar .fill { position: absolute; left: 0; top: 3px; bottom: 3px; border-radius: 3px; }
+  .meta { color: var(--ink-2); font-variant-numeric: tabular-nums; }
+  #hint { right: 16px; top: 16px; color: var(--ink-2); font-size: 12px; }
+  body.render .split-title { top: 22px; }
+  body.render #hud { bottom: 140px; }
+  body.render .lbl { font-size: 22px; padding: 4px 10px; }
+  body.render #hud { font-size: 20px; }
+  body.render .bar { height: 20px; }
+  body.render .split-title { font-size: 30px; }
+  .split-title { position: fixed; top: 90px; z-index: 2; width: 50%; text-align: center; font-weight: 650;
+    font-size: 20px; pointer-events: none; }
+  /* frames around the two split-screen views, in each controller's colour */
+  .pane { position: fixed; z-index: 1; display: none; pointer-events: none; box-sizing: border-box;
+    border: 3px solid; border-radius: 4px; }
+  #pl { border-color: var(--blue); } #pr { border-color: var(--orange); }
+  body.split .pane { display: block; }
+  /* in split screen each card sits inside its own view's frame */
+  body.split #hud { background: none; border: none; backdrop-filter: none; padding: 0;
+    left: 24px; right: 24px; bottom: 24px; column-gap: 34px; }
+  body.split .card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
+    padding: 10px 12px; backdrop-filter: blur(6px); }
+  body.render.split #hud { bottom: 140px; }
+  .lbl { font-size: 12px; color: var(--ink); background: var(--panel); border: 1px solid var(--line);
+    border-radius: 6px; padding: 2px 7px; white-space: nowrap; }
+  body.clean .ui { display: none; }
+  body.render .ui:not(#hud) { display: none; }
+  #err { position: fixed; inset: 0; display: none; place-items: center; text-align: center; padding: 24px; }
+  @media (max-width: 640px) { #hint { display: none; } }
+</style>
+</head>
+<body>
+<div id="view"></div>
+<div id="controls" class="ui">
+  <span id="title">Pendulum digital twin</span>
+  <select id="mode">
+    <option value="overview">Setup overview</option>
+    <option value="compare" selected>Replay: with vs without the model</option>
+    <option value="energy_identified">Replay: full controller</option>
+    <option value="energy_naive">Replay: ablation</option>
+  </select>
+  <label>Target <select id="target"></select></label>
+  <select id="cam">
+    <option value="iso">Three-quarter view</option>
+    <option value="replay">From the camera (room for the cards)</option>
+    <option value="camera">Camera's exact view</option>
+    <option value="overview">Wide view</option>
+    <option value="close">Close-up of the rig</option>
+    <option value="side">Side view</option>
+    <option value="orbit">Slow orbit</option>
+  </select>
+  <button id="labels">Labels</button>
+  <button id="play" class="on">Pause</button>
+  <button id="restart">Restart</button>
+  <select id="speed"><option value="1" selected>1×</option><option value="0.5">0.5×</option><option value="0.25">0.25×</option></select>
+</div>
+<div id="hint" class="ui">H: hide the interface · drag to orbit</div>
+<div id="hud" class="ui"></div>
+<div id="pl" class="pane"></div><div id="pr" class="pane"></div>
+<div id="tl" class="split-title"></div><div id="tr" class="split-title" style="left:50%"></div>
+<div id="err"><div><b>The 3D view could not start.</b><br>It needs WebGL and an internet connection (for three.js).<br>
+  Replay data: <code>docs/replay/replay_data.js</code> (run <code>analysis/export_replay.py</code>).</div></div>
+
+<script src="replay/replay_data.js"></script>
+<script type="importmap">
+{ "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+} }
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
+
+// ---------------------------------------------------------------------------------------------
+// As-built geometry (cm). x: right as the rig camera sees it; y: up from the floor; z: towards
+// the camera. The desk's front edge is z = 0; the rig (servo, pendulum) is at the desk centre.
+// Sources: owner's photos and answers (2026-09-29), docs/report.md, configs/rig_calibration.yaml.
+// Positions of the electronics are estimated from a top-view photo (breadboard 16.5 cm as scale).
+// ---------------------------------------------------------------------------------------------
+const DESK = { len: 150, depth: 65, top: 72, thick: 3 };
+const BOX = { x0: -5, x1: 9, z0: -8.6, z1: 0.4, h: 4.5 };          // parts box, 14 x 9 cm, overhangs 4 mm
+const AXIS = new THREE.Vector3(0, DESK.top + BOX.h + 1.1, 1.0);    // servo shaft (points at the camera)
+const ARM = 8.1, ROD_BELOW = 28.6, ROD_ABOVE = 1.2, ROD_W = 2.6, DOT = 23.7;
+// swing plane: front to back, yellow arm (green dot on its face) -> ruler -> red axle head -> sheet
+const PLANE_Z = 1.15;
+const GATE_Y = AXIS.y - ARM - 27.6;                               // light-gate beam height
+// Camera: lens 97 cm above the floor, 1.6 m from the pink dot at rest (owner, 2026-09-29), so
+// ~152 cm in front of the swing plane. Aim and field of view from the calibration: the image
+// centre sits 15.3 cm below and 2.3 cm left of the pivot; 720 px / 1530 px/m = 47 cm tall.
+const CAM = new THREE.Vector3(-2.3, 97, 153.8), CAM_AIM = new THREE.Vector3(-2.3, AXIS.y - 15.3, PLANE_Z);
+const LIGHT = new THREE.Vector3(90, 97, 95);                      // same height as the camera, ~45° to the side and ahead of it (estimate)
+
+const params = new URLSearchParams(location.search);
+const RENDER = params.has('render');
+if (RENDER) document.body.classList.add('render');
+const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const trials = window.REPLAY || [];
+const errBox = document.getElementById('err');
+
+let renderer;
+try {
+  renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+} catch (e) { errBox.style.display = 'grid'; throw e; }
+renderer.setPixelRatio(RENDER ? 1 : Math.min(devicePixelRatio, 2));
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+document.getElementById('view').appendChild(renderer.domElement);
+const labelRenderer = new CSS2DRenderer();
+Object.assign(labelRenderer.domElement.style, { position: 'fixed', inset: '0', pointerEvents: 'none', zIndex: 2 });
+document.body.appendChild(labelRenderer.domElement);
+
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(30, 1, 1, 8000);
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = !RENDER;
+
+// studio: soft light, a seamless floor, no room
+scene.add(new THREE.HemisphereLight(0xffffff, 0xb8bcc4, 1.25));
+const key = new THREE.DirectionalLight(0xffffff, 1.7);
+key.position.set(-160, 320, 260); key.castShadow = true;
+key.shadow.mapSize.set(2048, 2048);
+Object.assign(key.shadow.camera, { left: -220, right: 220, top: 220, bottom: -120, near: 50, far: 900 });
+key.shadow.bias = -0.0005; scene.add(key);
+const fillL = new THREE.DirectionalLight(0xe6eeff, 0.55); fillL.position.set(260, 140, 200); scene.add(fillL);
+
+const M = (color, o = {}) => new THREE.MeshStandardMaterial({ color, roughness: 0.62, metalness: 0, ...o });
+function box(w, h, d, color, o, parent = scene) {
+  const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), M(color, o));
+  m.castShadow = m.receiveShadow = true; parent.add(m); return m;
+}
+function cyl(r, h, color, o, parent = scene, seg = 32) {
+  const m = new THREE.Mesh(new THREE.CylinderGeometry(r, r, h, seg), M(color, o));
+  m.castShadow = m.receiveShadow = true; parent.add(m); return m;
+}
+function disc(r, color, parent) {
+  const m = new THREE.Mesh(new THREE.CircleGeometry(r, 40), new THREE.MeshBasicMaterial({ color }));
+  parent.add(m); return m;
+}
+function wire(points, color, r = 0.18) {
+  const curve = new THREE.CatmullRomCurve3(points.map(p => new THREE.Vector3(...p)));
+  const m = new THREE.Mesh(new THREE.TubeGeometry(curve, 120, r, 8), M(color, { roughness: 0.5 }));
+  m.castShadow = true; scene.add(m); return m;
+}
+const labels = [];
+function label(text, pos, group = 'close') {
+  const div = document.createElement('div'); div.className = 'lbl'; div.textContent = text;
+  const o = new CSS2DObject(div); o.position.set(...pos); o.userData.group = group;
+  scene.add(o); labels.push(o); return o;
+}
+
+// floor (seamless studio sweep colour): mid grey, so the white sheet and the pale parts keep their contrast
+const floor = new THREE.Mesh(new THREE.PlaneGeometry(3000, 3000), M(0x80858d, { roughness: 1 }));
+floor.rotation.x = -Math.PI / 2; floor.receiveShadow = true; scene.add(floor);
+
+// ---- desk ----
+const deskTop = box(DESK.len, DESK.thick, DESK.depth, 0x5b4636, { roughness: 0.7 });
+deskTop.position.set(0, DESK.top - DESK.thick / 2, -DESK.depth / 2);
+for (const [x, z] of [[-72, -3], [72, -3], [-72, -62], [72, -62]]) {
+  const leg = box(3, DESK.top - DESK.thick, 3, 0x2b2d31); leg.position.set(x, (DESK.top - DESK.thick) / 2, z);
+}
+
+// ---- parts box with the servo taped on top, shaft pointing at the camera ----
+const pbox = box(BOX.x1 - BOX.x0, BOX.h, BOX.z1 - BOX.z0, 0xdfe7ea, { transparent: true, opacity: 0.55, roughness: 0.2 });
+pbox.position.set((BOX.x0 + BOX.x1) / 2, DESK.top + BOX.h / 2, (BOX.z0 + BOX.z1) / 2);
+const servo = box(2.3, 2.2, 1.25, 0x2e5fb8); servo.position.set(0.55, AXIS.y - 0.4, 0.1);
+const servoTab = box(3.3, 2.2, 0.25, 0x2e5fb8); servoTab.position.set(0.55, AXIS.y - 0.4, -0.4);
+const shaft = cyl(0.25, 0.8, 0xf2f2ee, {}, scene); shaft.rotation.x = Math.PI / 2; shaft.position.set(0, AXIS.y, 0.9);
+label('SG90 servo on the parts box', [10, AXIS.y + 9, 0]);
+
+// ---- rotating parts: arm (yellow sliding-ruler tool) -> pivot -> steel ruler ----
+function makeRig() {
+  const arm = new THREE.Group(); arm.position.copy(AXIS); scene.add(arm);
+  const bar = box(2.1, ARM + 7.5, 0.45, 0xf2c230, { roughness: 0.45 }, arm);   // runs 1.3 cm past the pivot
+  bar.position.set(0, (4.9 - ARM) / 2, 0.5);
+  const head = box(3.4, 1.8, 0.6, 0xf2c230, { roughness: 0.45 }, arm); head.position.set(-0.6, 5.2, 0.5);
+  const horn = cyl(0.5, 0.5, 0xf6f6f2, {}, arm); horn.rotation.x = Math.PI / 2; horn.position.z = 0.2;
+  const knob = cyl(0.62, 0.45, 0xc8262e, {}, arm); knob.rotation.x = Math.PI / 2; knob.position.set(0, -ARM, -0.2);   // behind the ruler
+  const green = disc(0.62, 0x22b14c, arm); green.position.set(0, -ARM, 0.76);
+  const rod = new THREE.Group(); rod.position.set(0, -ARM, PLANE_Z - AXIS.z); arm.add(rod);
+  const ruler = box(ROD_W, ROD_BELOW + ROD_ABOVE, 0.1, 0xd4d8dd, { metalness: 0.25, roughness: 0.3 }, rod);
+  ruler.position.y = -(ROD_BELOW - ROD_ABOVE) / 2;
+  for (let k = 1; k < 29; k++) {
+    const t = box(k % 5 ? 0.55 : 1.0, 0.06, 0.02, 0x3d4046, {}, rod); t.castShadow = false;
+    t.position.set(-ROD_W / 2 + (k % 5 ? 0.28 : 0.5), ROD_ABOVE - 0.6 - k, 0.06);
+  }
+  const pink = disc(1.0, 0xf06292, rod); pink.position.set(0, -DOT, 0.07);
+  return { arm, rod };
+}
+const rig = makeRig();
+label('arm (8.1 cm)', [11, AXIS.y - 1, 3]);
+label('green dot = pivot', [13, AXIS.y - ARM - 2, 3]);
+label('pink dot, 23.7 cm below the pivot', [16, AXIS.y - ARM - DOT + 2.5, 3]);
+
+// ---- the printed protractor sheet hanging from the desk edge ----
+function protractorTexture() {
+  const W = 1680, H = 1188, s = W / 42, c = document.createElement('canvas');
+  c.width = W; c.height = H; const g = c.getContext('2d');
+  g.fillStyle = '#fbfbf8'; g.fillRect(0, 0, W, H);
+  const cx = W / 2, cy = 2.5 * s;
+  g.strokeStyle = '#3a3a3a'; g.fillStyle = '#3a3a3a';
+  for (let a = -45; a <= 45; a += 5) {
+    const t = a * Math.PI / 180; g.beginPath(); g.moveTo(cx, cy);
+    g.lineTo(cx + 25 * s * Math.sin(t), cy + 25 * s * Math.cos(t)); g.lineWidth = 2;
+    g.globalAlpha = a % 15 === 0 ? 0.85 : 0.3; g.stroke();
+  }
+  g.globalAlpha = 1;
+  for (let a = -45; a <= 45; a++) {
+    const t = a * Math.PI / 180, r0 = (a % 5 === 0 ? 23.8 : 24.4) * s;
+    g.beginPath(); g.moveTo(cx + r0 * Math.sin(t), cy + r0 * Math.cos(t));
+    g.lineTo(cx + 25 * s * Math.sin(t), cy + 25 * s * Math.cos(t)); g.lineWidth = 1.5; g.stroke();
+  }
+  g.beginPath(); g.arc(cx, cy, 25 * s, Math.PI / 4, 3 * Math.PI / 4); g.lineWidth = 2; g.stroke();
+  g.font = `${0.9 * s}px system-ui`; g.textAlign = 'center';
+  for (let a = -45; a <= 45; a += 15) {
+    const t = a * Math.PI / 180;
+    g.fillText(`${Math.abs(a)}°`, cx + 22.3 * s * Math.sin(t), cy + 22.3 * s * Math.cos(t));
+  }
+  const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 8; return tex;
+}
+const sheet = new THREE.Mesh(new THREE.PlaneGeometry(42, 29.7), new THREE.MeshStandardMaterial({ map: protractorTexture(), roughness: 0.95 }));
+sheet.position.set(0, DESK.top - 29.7 / 2, 0.15); sheet.receiveShadow = true; scene.add(sheet);
+label('printed protractor (angle check)', [-27, DESK.top - 26, 1]);
+
+// ---- latency LED (red) at the sheet's top-left corner ----
+const redLed = new THREE.Mesh(new THREE.SphereGeometry(0.35, 16, 12),
+  new THREE.MeshStandardMaterial({ color: 0xff3030, emissive: 0xff1010, emissiveIntensity: 1.3 }));
+redLed.position.set(-21, DESK.top - 0.8, 0.6); scene.add(redLed);
+label('red LED: camera-latency test', [-33, DESK.top - 7, 2]);
+
+// ---- light gate: PC cabinet (white LED on its top-front) + shoe box (photoresistor on a stand) ----
+const cab = box(18, 38, 40, 0x2b2b2e); cab.position.set(2, 19, -1.5 - 20);
+const cabTrim = box(18.2, 1.2, 40.2, 0xb3262e); cabTrim.position.set(2, 38.4, -21.5);
+const gateLed = new THREE.Mesh(new THREE.SphereGeometry(0.3, 16, 12),
+  new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xfff6dc, emissiveIntensity: 1.2 }));
+gateLed.position.set(0, GATE_Y, 0.4); scene.add(gateLed);
+const ledPost = box(1.0, GATE_Y - 38.5, 1.2, 0x2b2b2e); ledPost.position.set(0, (GATE_Y + 38.5) / 2, -0.4);
+const shoe = box(20, 32, 12, 0xd8322b); shoe.position.set(1, 16, 0.5 + 6);
+const shoeSide = box(20.1, 12, 12.1, 0x49b6d6); shoeSide.position.set(1, 6, 0.5 + 6);
+const stand = box(3.2, GATE_Y - 32, 1.0, 0xf2c230); stand.position.set(0, (GATE_Y + 32) / 2, 7.4);
+const ldr = cyl(0.28, 0.12, 0xd9481f, {}, scene); ldr.rotation.x = Math.PI / 2; ldr.position.set(0, GATE_Y, 6.4);
+label('light gate: white LED ← 6 cm → photoresistor', [24, GATE_Y - 2.5, 6]);
+label('PC cabinet (38 cm)', [20, 26, -2]);
+label('shoe box (32 cm)', [-22, 22, 10]);
+
+// ---- electronics on the desk (estimated from the top-view photo) ----
+const T = DESK.top;
+const pm = box(5.3, 1.2, 3.5, 0x1b1c20); pm.position.set(-38, T + 0.6, -10); pm.rotation.y = 0.6;
+const pmLed = disc(0.25, 0x33ff66, scene); pmLed.rotation.x = -Math.PI / 2; pmLed.position.set(-38.5, T + 1.25, -9.6);
+const bb = box(16.5, 0.9, 5.5, 0xf4f1e6); bb.position.set(-33, T + 0.45, -16); bb.rotation.y = 0.6 + Math.PI / 2;
+const uno = box(6.9, 0.35, 5.3, 0x1c6fb0); uno.position.set(-42, T + 0.8, -24); uno.rotation.y = 0.5;
+const unoUsb = box(1.2, 1.1, 1.6, 0xb9bcc2); unoUsb.position.set(-40, T + 1.2, -26.5); unoUsb.rotation.y = 0.5;
+label('Arduino UNO', [-66, T + 16, -34]);
+label('breadboard', [-26, T + 7, -9]);
+label('5 V power module (servo supply)', [-60, T + 3, -2]);
+// laptop on a cooling stand
+const lap = new THREE.Group(); lap.position.set(-50, T, -40); lap.rotation.y = 0.25; scene.add(lap);
+const lstand = box(40, 2.4, 28, 0x202226, {}, lap); lstand.position.set(0, 1.2, 0); lstand.rotation.x = 0.1;
+const lbase = box(38, 2.2, 26, 0x16171a, {}, lap); lbase.position.set(0, 3.9, 0.5); lbase.rotation.x = 0.1;
+const lid = new THREE.Group(); lid.position.set(0, 5.3, -12); lid.rotation.x = -0.28; lap.add(lid);
+const lscreen = box(38, 25, 0.8, 0x16171a, {}, lid); lscreen.position.set(0, 12.5, 0);
+const glass = new THREE.Mesh(new THREE.PlaneGeometry(35, 21), new THREE.MeshBasicMaterial({ color: 0x2c3a52 }));
+glass.position.set(0, 12.8, 0.45); lid.add(glass);
+
+// wires
+wire([[-34, T + 0.9, -12], [-24, T + 3, -8], [-10, T + 5, -5], [-1, AXIS.y, -2], [0.55, AXIS.y - 0.4, -0.6]], 0xe8792b, 0.2);   // servo lead
+wire([[-40, T + 1.1, -22], [-36, T + 3, -19], [-33, T + 1, -16]], 0x2f9e44, 0.12);
+wire([[-43, T + 1.1, -21], [-38, T + 2.5, -18], [-34, T + 1, -14]], 0xf0c419, 0.12);
+wire([[-31, T + 1, -12], [-26, T + 2, -3], [-21.5, T + 0.5, 0.4], [-21, T - 0.8, 0.6]], 0x2b5fd6, 0.1);     // to red LED
+wire([[-30, T + 1, -13], [-25, T + 1.5, -1], [-24, T - 2, 0.7], [-22, T - 40, 1.2], [-6, GATE_Y + 0.5, 1.2], [0, GATE_Y, 0.9]], 0xd8d8d8, 0.1); // to gate LED
+wire([[-29, T + 1, -14], [-24.5, T + 1.5, -1], [-23.5, T - 2, 0.9], [-21, T - 36, 6], [-4, GATE_Y - 1, 6.5], [0, GATE_Y, 6.6]], 0xe0a31c, 0.1); // to photoresistor
+wire([[-44, T + 1.3, -27], [-46, T + 3, -32], [-44, T + 5, -34]], 0x2f5fbf, 0.28);   // USB to the laptop
+wire([[-40, T + 0.7, -12], [-50, T + 0.4, -6], [-60, T + 0.3, -3], [-66, T - 4, 0.3]], 0x111111, 0.3); // DC adapter lead
+
+// ---- the camera on its tripod and the LED panel ----
+function tripod(pos, headY, color) {
+  const g = new THREE.Group(); g.position.copy(pos); scene.add(g);
+  for (let k = 0; k < 3; k++) {
+    const a = k * 2 * Math.PI / 3 + 0.3;
+    const leg = cyl(0.6, headY * 1.05, color, {}, g, 12);
+    leg.position.set(14 * Math.sin(a), headY / 2, 14 * Math.cos(a));
+    leg.rotation.set(-0.22 * Math.cos(a), 0, 0.22 * Math.sin(a));
+  }
+  const col = cyl(1.0, 22, color, {}, g, 16); col.position.y = headY - 11;
+  return g;
+}
+tripod(new THREE.Vector3(CAM.x, 0, CAM.z), CAM.y - 8, 0x1f2125);
+const camG = new THREE.Group(); camG.position.copy(CAM); camG.lookAt(CAM_AIM); scene.add(camG);
+// lookAt() aims an object's +z at the target, so the lens points along +z
+const body = box(13, 9.5, 7.5, 0x26272a, {}, camG); body.position.set(0, 1, -4);
+const lens = cyl(4.3, 21, 0xefefea, { roughness: 0.3 }, camG); lens.rotation.x = Math.PI / 2; lens.position.set(0, 0, 10);
+const hood = cyl(4.8, 4, 0x26272a, {}, camG); hood.rotation.x = Math.PI / 2; hood.position.set(0, 0, 22);
+
+tripod(new THREE.Vector3(LIGHT.x, 0, LIGHT.z), LIGHT.y - 6, 0x1f2125);
+const lightG = new THREE.Group(); lightG.position.copy(LIGHT); lightG.lookAt(new THREE.Vector3(0, DESK.top - 15, 0)); scene.add(lightG);
+const panel = box(20, 26, 2.4, 0x26272a, {}, lightG);
+const glow = new THREE.Mesh(new THREE.PlaneGeometry(18, 24), new THREE.MeshBasicMaterial({ color: 0xfffaf0 }));
+glow.position.z = 1.25; lightG.add(glow);
+
+
+label('camera (~150 ms late)', [CAM.x, CAM.y + 16, CAM.z], 'wide');
+label('LED light', [LIGHT.x, LIGHT.y + 19, LIGHT.z], 'wide');
+label('laptop', [-50, T + 31, -46], 'wide');
+label('UNO + breadboard + servo power', [-40, T + 9, -14], 'wide');
+label('servo + pendulum', [0, AXIS.y + 10, 2], 'wide');
+label('light gate', [0, GATE_Y - 5, 8], 'wide');
+
+let showLabels = !RENDER;
+// on: false | 'wide' | 'close' (true = the group that suits the current view)
+const setLabels = on => {
+  showLabels = on;
+  const grp = on === true ? (document.getElementById('cam').value === 'overview' || selC.value === 'orbit' ? 'wide' : 'close') : on;
+  labels.forEach(l => (l.visible = !!on && l.userData.group === grp));
+  document.getElementById('labels').classList.toggle('on', !!on);
+};
+
+// ---------------- replay state ----------------
+const targets = [...new Set(trials.map(t => t.target_deg))].sort((a, b) => a - b);
+const selM = document.getElementById('mode'), selT = document.getElementById('target'),
+      selC = document.getElementById('cam'), btnP = document.getElementById('play'),
+      selS = document.getElementById('speed'), hud = document.getElementById('hud'),
+      tl = document.getElementById('tl'), tr = document.getElementById('tr');
+targets.forEach(t => selT.add(new Option(`${t}°`, t)));
+if (targets.length) selT.value = targets[targets.length - 1];
+const COLORS = { energy_identified: () => css('--blue'), energy_naive: () => css('--orange') };
+let active = [], mode = 'compare';
+
+function trial(controller, target) {
+  return trials.find(t => t.target_deg === +target && t.controller === controller);
+}
+function setMode(m, target) {
+  mode = m; if (target !== undefined) selT.value = target;
+  selM.value = m;
+  active = m === 'overview' ? [] : m === 'compare'
+    ? [trial('energy_identified', selT.value), trial('energy_naive', selT.value)].filter(Boolean)
+    : [trial(m, selT.value)].filter(Boolean);
+  const split = m === 'compare' && active.length === 2;
+  document.body.classList.toggle('split', split);
+  tl.textContent = split ? 'With the learned model' : '';
+  tr.textContent = split ? 'Without it (ablation)' : '';
+  hud.innerHTML = active.map((t, i) => `
+    <div class="card">
+      <div class="name"><span class="swatch" style="background:${COLORS[t.controller]()}"></span>${t.label}</div>
+      <div class="bar"><div class="band" style="left:${(t.target_deg - 2) / 45 * 100}%;width:${4 / 45 * 100}%"></div>
+        <div class="fill" id="fill${i}" style="background:${COLORS[t.controller]()}"></div></div>
+      <div class="meta" id="meta${i}"></div>
+    </div>`).join('');
+  if (m === 'overview') { if (!RENDER) { selC.value = 'overview'; setLabels(true); } }
+  else if (!RENDER) setLabels(false);
+  setCam(selC.value);
+}
+
+const DEG = Math.PI / 180;
+function pose(t, sec) {
+  const n = t.theta_deg.length, k = Math.max(0, Math.min(n - 1, Math.floor(sec * t.fps)));
+  rig.arm.rotation.z = t.phi_deg[k] * DEG;
+  rig.rod.rotation.z = (t.theta_deg[k] - t.phi_deg[k]) * DEG;   // the rod angle is absolute
+  return k;
+}
+function updateHud(sec) {
+  active.forEach((t, i) => {
+    const n = t.theta_deg.length, k = Math.max(0, Math.min(n - 1, Math.floor(sec * t.fps)));
+    const f = document.getElementById(`fill${i}`), me = document.getElementById(`meta${i}`);
+    if (f) f.style.width = `${Math.min(100, t.amp_deg[k] / 45 * 100)}%`;
+    if (me) me.textContent = `t ${(k / t.fps).toFixed(1)} s · amplitude ${t.amp_deg[k].toFixed(1)}° ` +
+      `(target ${t.target_deg}°) · trial RMS error ${(+t.rms_err_deg).toFixed(2)}°`;
+  });
+}
+
+// ---------------- cameras ----------------
+const PRESETS = {
+  iso: { pos: new THREE.Vector3(-255, 200, 285), target: new THREE.Vector3(-10, 52, 0), fov: 30 },   // default
+  camera: { pos: CAM.clone(), target: CAM_AIM.clone(), fov: 17.2 },
+  // same position, aimed lower and wider so the swing clears the split titles and HUD cards
+  replay: { pos: CAM.clone(), target: new THREE.Vector3(CAM_AIM.x, AXIS.y - 18.3, PLANE_Z), fov: 20 },
+  overview: { pos: new THREE.Vector3(-250, 230, 470), target: new THREE.Vector3(5, 62, 70), fov: 32 },
+  close: { pos: new THREE.Vector3(70, 105, 120), target: new THREE.Vector3(-14, 60, -4), fov: 38 },
+  side: { pos: new THREE.Vector3(130, 75, 70), target: new THREE.Vector3(0, 60, 2), fov: 28 },
+  orbit: { pos: new THREE.Vector3(-250, 230, 470), target: new THREE.Vector3(5, 62, 70), fov: 32 },
+};
+let camName = 'iso';
+function setCam(name, custom) {
+  camName = custom ? 'custom' : (name || 'iso');
+  camG.visible = camName !== 'camera' && camName !== 'replay';   // the viewpoint sits inside the camera model
+  const p = custom || PRESETS[name] || PRESETS.iso;
+  camera.position.copy(p.pos); controls.target.copy(p.target); camera.fov = p.fov;
+  camera.updateProjectionMatrix(); controls.update();
+}
+
+function resize() {
+  const w = innerWidth, h = innerHeight;
+  renderer.setSize(w, h); labelRenderer.setSize(w, h); camera.aspect = w / h; camera.updateProjectionMatrix();
+}
+addEventListener('resize', resize); resize();
+
+// draw one frame at replay time `sec` (split screen in compare mode)
+function draw(sec, now = 0) {
+  renderer.setClearColor(new THREE.Color(css('--stage')));
+  const w = innerWidth, h = innerHeight;
+  if (mode === 'compare' && active.length === 2) {
+    // two framed panes with a page-coloured gap between them
+    const m = RENDER ? 16 : 10, gap = RENDER ? 16 : 10, pw = (w - 2 * m - gap) / 2;
+    const top = RENDER || document.body.classList.contains('clean') ? m : 78;   // clear of the control bar
+    const ph = h - top - m;
+    renderer.setScissorTest(false); renderer.setClearColor(new THREE.Color(css('--bg'))); renderer.clear();
+    renderer.setClearColor(new THREE.Color(css('--stage')));
+    renderer.setScissorTest(true);
+    const savedAspect = camera.aspect; camera.aspect = pw / ph; camera.updateProjectionMatrix();
+    active.forEach((t, i) => {
+      pose(t, sec);
+      const x = m + i * (pw + gap);
+      renderer.setViewport(x, m, pw, ph); renderer.setScissor(x, m, pw, ph);
+      renderer.render(scene, camera);
+      Object.assign(document.getElementById(i ? 'pr' : 'pl').style,
+        { left: `${x}px`, top: `${top}px`, width: `${pw}px`, height: `${ph}px` });
+    });
+    camera.aspect = savedAspect; camera.updateProjectionMatrix();
+    renderer.setScissorTest(false); renderer.setViewport(0, 0, w, h);
+    labelRenderer.domElement.style.display = 'none';
+  } else {
+    if (active[0]) pose(active[0], sec); else { rig.arm.rotation.z = 0; rig.rod.rotation.z = 0.25 * Math.sin(now / 1000 * 6.73); }
+    renderer.setViewport(0, 0, w, h); renderer.render(scene, camera);
+    labelRenderer.domElement.style.display = ''; labelRenderer.render(scene, camera);
+  }
+  updateHud(sec);
+}
+
+// ---------------- interactive loop ----------------
+let t0 = performance.now(), paused = false, tPaused = 0;
+selM.onchange = () => { setMode(selM.value); t0 = performance.now(); };
+selT.onchange = () => { setMode(mode); t0 = performance.now(); };
+selC.onchange = () => { setCam(selC.value); if (showLabels) setLabels(true); };
+document.getElementById('labels').onclick = () => setLabels(!showLabels);
+document.getElementById('restart').onclick = () => { t0 = performance.now(); tPaused = 0; };
+btnP.onclick = () => {
+  paused = !paused;
+  if (paused) tPaused = performance.now(); else { t0 += performance.now() - tPaused; tPaused = 0; }
+  btnP.textContent = paused ? 'Play' : 'Pause'; btnP.classList.toggle('on', !paused);
+};
+addEventListener('keydown', e => { if (e.key === 'h' || e.key === 'H') document.body.classList.toggle('clean'); });
+
+function loop(now) {
+  requestAnimationFrame(loop);
+  const sec = Math.max(0, ((paused ? tPaused : now) - t0) / 1000 * +selS.value);
+  if (selC.value === 'orbit') {
+    const a = now / 1000 * 0.1, p = PRESETS.orbit;
+    camera.position.set(p.target.x + 520 * Math.sin(a - 0.5), 230, p.target.z + 520 * Math.cos(a - 0.5));
+  }
+  controls.update();
+  draw(sec, now);
+}
+
+// ---------------- scripted rendering (analysis/render_video.py) ----------------
+// window.twin.frame({mode, target, cam: {pos, target, fov} | name, sec, labels, orbitDeg}) draws one frame.
+window.twin = {
+  ready: true,
+  frame(o) {
+    if (o.mode !== undefined && (o.mode !== mode || String(o.target) !== selT.value)) setMode(o.mode, o.target);
+    if (o.labels !== undefined) setLabels(o.labels);
+    if (o.cam) {
+      if (typeof o.cam === 'string') setCam(o.cam);
+      else setCam(null, { pos: new THREE.Vector3(...o.cam.pos), target: new THREE.Vector3(...o.cam.target), fov: o.cam.fov });
+    }
+    controls.update();
+    draw(o.sec || 0, (o.sec || 0) * 1000);
+    return true;
+  },
+};
+
+setLabels(showLabels);
+setMode(RENDER ? (params.get('mode') || 'overview') : 'compare');
+if (!RENDER) requestAnimationFrame(loop);
+</script>
+</body>
+</html>

@@ -1,0 +1,2396 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="Each entry records the decisions made, failures and surprises, the evidence behind them, and the next step. Entries are never edited after the fact; correcti...">
+<meta name="author" content="Yagyaansh Khaneja">
+<link rel="icon" type="image/x-icon" href="../../assets/images/art.svg">
+<title>Engineering Log | Pendulum Lab | Yagyaansh Khaneja</title>
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+<link rel="stylesheet" href="site.css">
+</head>
+<body class="doc">
+<nav class="top" aria-label="Breadcrumb">
+  <a href="../../index.html" title="Yagyaansh Khaneja">yagyaansh.com</a><span class="crumb" aria-hidden="true">/</span>
+  <a href="../../projects.html" title="Projects">Projects</a><span class="crumb" aria-hidden="true">/</span>
+  <a href="index.html" title="Pendulum Lab">Pendulum Lab</a>
+</nav>
+<main>
+<h1 id="engineering-log">Engineering Log</h1>
+<p>Each entry records the <strong>decisions</strong> made, <strong>failures and surprises</strong>, the <strong>evidence</strong> behind them, and the <strong>next step</strong>. Entries are never edited after the fact; corrections go in later entries.</p>
+<hr />
+<h2 id="2026-09-26-sat-day-12">2026-09-26 (Sat): Day 1–2</h2>
+<h3 id="decisions">Decisions</h3>
+<ol>
+<li><strong>Project choice.</strong> P1 (active system identification + control of a camera-tracked, servo-driven pendulum) was chosen because it is the project the owned hardware best supports.
+<ul>
+<li>P2 (focus mapping) was rejected for now because no available camera has software-controllable focus.</li>
+<li>P3 (microscope stage) would need a USB microscope and a stage built from scratch.</li>
+</ul>
+</li>
+<li><strong>Owned parts only</strong> until the go/no-go gate on 2026-10-05. The AS5600, MG996R, bearing and 5 V supply become conditional upgrades U1–U4 (<code>requirements.md</code>).</li>
+<li><strong>Architecture: the laptop is the brain, and the board is a thin I/O slave</strong> over USB serial.
+<ul>
+<li>Reasons: all the vision, estimation and control run in one process with one clock, and the code does not depend on which board is used (UNO or Mega).</li>
+</ul>
+</li>
+<li><strong>Servo modelled as a second-order position loop</strong> (ω_n, ζ, rate limit, acceleration limit, dead time) rather than a first-order lag.
+<ul>
+<li>Reason: with a first-order lag, a step in the held command makes φ̇ jump. The pivot acceleration then becomes impulsive and the pendulum would receive unphysical velocity kicks every 20 ms command update.</li>
+<li>A second-order loop keeps φ̇ continuous and φ̈ bounded, and the state becomes [θ, θ̇, φ, φ̇], which is what the EKF will use.</li>
+</ul>
+</li>
+<li><strong>Custom Python simulator (fixed-step RK4, dt = 1 ms)</strong> rather than MuJoCo or Gazebo. The physics is a single 4-state ODE, and a custom model lets us inject exactly the imperfections we will measure (dead time, rate limits, frame drops, latency, blur).</li>
+<li><strong>Camera simulated at the marker-centroid level, not as rendered images.</strong> Perception is validated on real frames (E1), so rendering synthetic images would add work without adding evidence.</li>
+<li><strong>Logging format: CSV + JSON per run</strong>, with schema version, config, seed and git SHA. Parquet and MLflow were rejected: CSV/JSON are readable by any tool and add no dependencies.</li>
+<li><strong>R-I1 damping tolerance set to 20%</strong> (the strategy document assumed 5% for all parameters). The reason is recorded in the <code>requirements.md</code> change log.</li>
+</ol>
+<h3 id="evidence-gathered">Evidence gathered</h3>
+<ul>
+<li><strong>Laptop webcam</strong> (&quot;HD WebCam&quot;, USB 0408:A060, via OpenCV DirectShow):
+<ul>
+<li>640×480 at 30.1–30.3 fps; frame interval median 32.0 ms, p95 ≈ 47 ms, max ≈ 49 ms.</li>
+<li>Manual exposure works: −8 (≈ 4 ms) keeps 30 fps but the image is very dark in room light (mean brightness 9/255); −4 (≈ 62 ms) drops the rate to 16 fps.</li>
+<li>Focus is fixed (not controllable).</li>
+<li>1280×720 ran at 10 fps in one trial, probably auto-exposure in dim light. <strong>Always lock exposure.</strong></li>
+</ul>
+</li>
+<li><strong>HCL USB webcam</strong> (0C45:602A): Windows device error Code 28, &quot;drivers not installed&quot;. It uses an old Sonix chip from before the UVC standard, and current Windows versions probably have no driver for it. Not usable.</li>
+<li><strong>Motion-blur budget:</strong> a 40 cm pendulum at ±30° moves its bob at ≈ 1 m/s at the bottom of the swing, so an exposure ≤ 8 ms is needed (≈ 4–8 mm blur). This means <strong>bright, flicker-free lighting is a hard requirement.</strong> In India the mains is 50 Hz, so lamps flicker at 100 Hz; prefer a DC LED lamp or an exposure that is a multiple of 10 ms.</li>
+<li><strong>Simulator:</strong> 26/26 tests pass.
+<ul>
+<li>Period matches the exact elliptic solution within 1e-4 at 0.01, 1 and 2 rad.</li>
+<li>Energy drift is &lt; 1e-6.</li>
+<li>RK4 order is 4 ± 0.3.</li>
+<li>Forced response matches the analytic linear resonance curve within 2%.</li>
+<li>Camera statistics match the configuration.</li>
+<li>Runs are deterministic per seed.</li>
+</ul>
+</li>
+<li><strong>Smoke runs (simulation, 20 s):</strong>
+<ul>
+<li>chirp from 0.5 f₀ to 2 f₀ at ±20° servo amplitude → max |θ| 42.7°;</li>
+<li>resonant sine at only ±10° → 43.6°.</li>
+</ul>
+</li>
+</ul>
+<h3 id="surprises-and-risks">Surprises and risks</h3>
+<ul>
+<li><strong>Resonance builds amplitude fast.</strong> A ±10° servo motion at f₀ reaches about 44° in 20 s, so the 60° safety constraint (R-I3, R-C2) is not hypothetical: resonant excitation will hit it. The experiment designer must predict amplitude before running any candidate.</li>
+<li><strong>The simulator is slow:</strong> about 0.25 ms per RK4 step in pure Python (20 s simulated ≈ 5 s wall-clock). That is fine for tests, but too slow for the E2 campaign (thousands of simulations) and the D-optimal search (sensitivities × posterior samples × candidates). The plan is to batch the integrator over a leading parameter axis (the dynamics functions already broadcast) and to cache sensitivities. Measure this before optimising.</li>
+<li><strong>Photoresistor response time</strong> (typically tens of ms) may blur the light-gate timing. That is why E1b compares periods, in which constant delays cancel.</li>
+<li><strong>Improvised pivot:</strong> without a bearing, expect larger Coulomb friction and possible out-of-plane wobble. Friction is modelled (μ); wobble must be checked visually and logged.</li>
+<li><strong>Servo power:</strong> the kit's breadboard power module has a small linear regulator. A spare 5 V ≥2 A phone charger with a stripped USB cable, sharing ground with the board, is the preferred servo supply. It is still to be confirmed that one is available.</li>
+</ul>
+<h3 id="next-steps-day-3-2026-09-28">Next steps (Day 3, 2026-09-28)</h3>
+<ol>
+<li>Identification core:
+<ul>
+<li>multiple-shooting nonlinear least squares;</li>
+<li>Laplace posterior;</li>
+<li>the 4 damping models.</li>
+</ul>
+</li>
+<li>A batched integrator for speed, with its speed-up measured.</li>
+<li>Simulation recovery test (R-I1) and the free-decay, chirp and random baselines.</li>
+<li>Hardware prep: find a stiff rod and pin, and a 5 V phone charger; print a protractor sheet.</li>
+</ol>
+<hr />
+<h2 id="2026-09-26-sat-evening-setup-guide-and-protractor-correction">2026-09-26 (Sat, evening): setup guide and protractor correction</h2>
+<h3 id="decisions-1">Decisions</h3>
+<ol>
+<li><strong>Interactive 3D setup guide</strong> (<code>docs/rig_setup.html</code>, Three.js) chosen over a static diagram.
+<ul>
+<li>It includes a webcam's-eye view that checks the planned framing: servo at the top, the full ±60° swing inside a 640×480 frame at 8 px/cm.</li>
+<li>It doubles as a portfolio visual.</li>
+</ul>
+</li>
+<li><strong>Wires run along the backdrop edges.</strong> The webcam's-eye view showed that a wire routed behind the pendulum would sit in the middle of the frame.</li>
+<li><strong>Protractor for E1a: 250 mm radius, ±45°, on 2 × A4.</strong> This replaces &quot;radius ≥ 35 cm on two A4 sheets&quot;.</li>
+</ol>
+<h3 id="failure-corrected">Failure (corrected)</h3>
+<p>The first setup guide said a protractor of radius ≥ 35 cm fits on two A4 sheets. <strong>That was wrong</strong> (the user caught it).</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Protractor</th>
+<th>Size needed</th>
+<th>A4 sheets</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>35 cm, ±60°</td>
+<td>60.6 × 35 cm</td>
+<td>6</td>
+</tr>
+<tr>
+<td>35 cm, ±45°</td>
+<td>49.5 × 35 cm</td>
+<td>4</td>
+</tr>
+</tbody>
+</table></div>
+<p>The fix follows from what E1a actually needs:</p>
+<ul>
+<li>E1a only tests ±45°.</li>
+<li>The reference error is set by how well the rod lines up with a printed line. 1 mm of misalignment at 250 mm is ≈ 0.23°, against the 1.0° RMS requirement.</li>
+<li>So 250 mm, ±45° (35.4 × 25 cm) fits on two portrait A4 sheets with no meaningful loss.</li>
+</ul>
+<p>The generated PDF has three safeguards:</p>
+<ul>
+<li>The script asserts that the page scale is exactly 1:1.</li>
+<li>Each page carries 100 mm horizontal and vertical check bars, for printers set to &quot;fit to page&quot;.</li>
+<li>The pages overlap by 2 × 10 mm, with a cut line and registration crosses, so printer margins cannot eat the centre.</li>
+</ul>
+<hr />
+<h2 id="2026-09-26-sat-night-first-hardware-contact-servo-bare-test">2026-09-26 (Sat, night): first hardware contact, servo bare test</h2>
+<h3 id="setup">Setup</h3>
+<ul>
+<li>ELEGOO UNO R3 (it enumerates as an Arduino UNO, USB 2341:0043, on COM9).</li>
+<li>SG90 connected through a jumper extension:
+<ul>
+<li>red → 5V</li>
+<li>brown → GND</li>
+<li>orange → D9</li>
+</ul>
+</li>
+<li>Unloaded: no horn or arm attached.</li>
+<li>Toolchain: Arduino IDE 2.3.10 via winget, with arduino:avr 1.8.8 and Servo 1.1.8.
+<ul>
+<li>Installed to the default location on C:. The user now requires installs to go to <code>D:\Installations</code>, so this should be moved later.</li>
+</ul>
+</li>
+</ul>
+<h3 id="evidence">Evidence</h3>
+<p><code>firmware/servo_test</code> now also reports the board's supply voltage (Vcc). It measures the internal 1.1 V bandgap against AVcc, which is about ±10% absolute, but relative changes are meaningful. The value reported is the minimum over the 600 ms after each command.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Command</th>
+<th>Vcc after the move</th>
+<th>Minimum during the move</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>boot → 1500 µs</td>
+<td>5138 mV</td>
+<td>5115 mV</td>
+</tr>
+<tr>
+<td>1000 µs</td>
+<td>5138 mV</td>
+<td><strong>4412 mV</strong></td>
+</tr>
+<tr>
+<td>2000 µs</td>
+<td>5138 mV</td>
+<td><strong>4412 mV</strong></td>
+</tr>
+<tr>
+<td>1500 µs</td>
+<td>5115 mV</td>
+<td>4501 mV</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="interpretation">Interpretation</h3>
+<ul>
+<li><strong>Even unloaded</strong>, the SG90 pulls the UNO's USB-fed 5 V rail down by about 0.7 V (≈ 14%) while it moves. There was no brown-out reset, but the margin is small.</li>
+<li>This is <strong>measured justification for requirement R-A2</strong> (a separate servo supply with a shared ground) before any load is attached.</li>
+<li>The weak green &quot;ON&quot; LED is not a supply problem: Vcc at rest is 5.1 V.</li>
+</ul>
+<h3 id="next">Next</h3>
+<ol>
+<li>Record the user's visual check: the swing range and smoothness at 1000/2000/1500 µs.</li>
+<li>Fit the horn straight down at 1500 µs.</li>
+<li>Move the servo to the external 5 V supply before attaching the arm and ruler.</li>
+<li>Repeat the Vcc-dip measurement on external power; the dip should be much smaller.</li>
+</ol>
+<hr />
+<h2 id="2026-09-27-sun-early-rig-geometry-first-pivot-friction-check">2026-09-27 (Sun, early): rig geometry, first pivot friction check</h2>
+<h3 id="measurements-user">Measurements (user)</h3>
+<ul>
+<li><strong>Arm radius:</strong> servo shaft centre → pivot centre = <strong>7.7 cm ± ~3 mm</strong>.</li>
+<li><strong>Masses:</strong> arm (yellow compass-cutter tool) 23 g; the user has since lightened it (new value to follow). Steel ruler (pendulum) 43 g.</li>
+<li><strong>Free swing on the first pivot</strong> (the ruler clamped under the compass cutter's red knob, turning on its screw thread): it stops after about <strong>8–10 swings</strong> from ~30°. That is ≈ 4–9 s against the ≥ 20 s acceptance target.
+<ul>
+<li>Interpretation: face-clamping friction. It could also <em>change during a run</em>, because the swinging ruler can screw the knob tighter or looser.</li>
+<li>Decision: replace it with the bolt pivot (smooth bolt, nut clamping it to the tool, ruler between washers, locked double nut, ~1 mm play). This is waiting on the ruler's hole diameter.</li>
+</ul>
+</li>
+</ul>
+<h3 id="config-changes-configssimyaml">Config changes (<code>configs/sim.yaml</code>)</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Old</th>
+<th>New</th>
+<th>Basis</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>servo.arm_radius</code></td>
+<td>0.07 m</td>
+<td><strong>0.077 m</strong></td>
+<td>Measured</td>
+</tr>
+<tr>
+<td><code>pendulum.kappa</code></td>
+<td>2.857 1/m</td>
+<td><strong>4.834 1/m</strong></td>
+<td>Uniform-rod estimate for a ~32 cm ruler pivoted ~1 cm from its end: L_eq = 0.207 m, period ≈ 0.91 s. To be identified.</td>
+</tr>
+<tr>
+<td><code>camera.marker_distance</code></td>
+<td>0.35 m</td>
+<td><strong>0.27 m</strong></td>
+<td>Planned marker position on the 30 cm ruler</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="test-fix">Test fix</h3>
+<ul>
+<li><code>test_rk4_convergence_order</code> failed after the κ change: measured orders were 3.36 and 3.76.</li>
+<li>Cause: the fixed step sizes (dt = 0.02 s) put ω₀·dt = 0.14 outside the asymptotic regime for the faster pendulum. The order approached 4 as dt shrank (3.36 → 3.76 → 3.90), so the integrator itself was fine.</li>
+<li>Fix: the test now scales its steps with the pendulum's own time scale (ω₀·dt = 0.05 … 0.0125) and runs for two periods. It passes, and stays valid for any identified κ. All 26 tests pass.</li>
+</ul>
+<h3 id="finding">Finding</h3>
+<p>With the ruler, a ±10° resonant servo sine drives |θ| to <strong>57° in 20 s</strong> in simulation (it was 44° for the old 35 cm rod).</p>
+<ul>
+<li><strong>Hardware experiments should use excitation amplitudes of about ±5°.</strong></li>
+<li>The 60° safety constraint (R-I3, R-C2) will be active in practice, not just in principle.</li>
+</ul>
+<hr />
+<h2 id="2026-09-27-sun-loaded-servo-on-uno-5-v-vcc-cut-off-triggered">2026-09-27 (Sun): loaded servo on UNO 5 V: Vcc cut-off triggered</h2>
+<h3 id="setup-1">Setup</h3>
+<ul>
+<li>The arm is now <strong>≈ 13 g</strong> (lightened from 23 g). The 43 g ruler hangs on the pivot. The rig is assembled.</li>
+<li>The servo is <strong>still powered from the UNO's 5V pin</strong>. This was the user's current wiring. The visual check was run with a safety cut-off instead of the separate supply.</li>
+</ul>
+<h3 id="procedure">Procedure</h3>
+<p>The servo was ramped in 10 µs steps (≈ 1° each) from 1500 toward ±40 µs. After each step, the minimum Vcc over the following 600 ms was read, with an abort if it fell below 4600 mV.</p>
+<h3 id="evidence-1">Evidence</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Step</th>
+<th>Minimum Vcc</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Boot re-centre</td>
+<td>4669 mV</td>
+</tr>
+<tr>
+<td>1500 → 1490 µs</td>
+<td>4669 mV</td>
+</tr>
+<tr>
+<td>1490 → 1480 µs</td>
+<td><strong>4412 mV → abort.</strong> The servo holds at 1480 µs. There was no reset, and Vcc recovered to 5138 mV.</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="interpretation-1">Interpretation</h3>
+<ul>
+<li><strong>A 1° step produces the same ≈ 0.7 V dip as the unloaded ±45° swings on 2026-09-26.</strong> The dip is the motor's start-up current spike, not a sustained load: it does not scale with step size or with the attached load. Smaller moves therefore cannot avoid it; only the power path can.</li>
+<li>The 4600 mV cut-off is conservative. The ATmega328P's 16 MHz speed grade allows roughly ≥ 3.8 V (datasheet speed-grade curve), and brown-out is at 2.7 V. But this confirms again that the servo must be moved to the separate 5 V supply (R-A2).</li>
+</ul>
+<h3 id="next-1">Next</h3>
+<p>The user chooses between three options:</p>
+<ol>
+<li>the separate supply (recommended);</li>
+<li>a 100 µF capacitor at the servo, then retry;</li>
+<li>a 4.2 V cut-off for the visual check only.</li>
+</ol>
+<h3 id="follow-up-same-day-visual-motion-check-with-a-42-v-cut-off">Follow-up (same day): visual motion check with a 4.2 V cut-off</h3>
+<p><strong>Decision.</strong> The user asked to continue on UNO 5 V power. The risk was judged acceptable for a visual check only:</p>
+<ul>
+<li>the chip is rated to about 3.8 V at 16 MHz, and brown-out is at 2.7 V;</li>
+<li>the worst realistic outcome is a reset or a trip of the 500 mA USB polyfuse.</li>
+</ul>
+<p>Cut-off lowered to 4200 mV, with a stop on any board restart.</p>
+<p><strong>Procedure.</strong></p>
+<ul>
+<li>Connected with DTR/RTS low, so the board did not reset and the servo stayed at 1480 µs.</li>
+<li>Ramped in 10 µs (≈ 1°) steps: 1480 → 1460 → 1540 → 1500 µs.</li>
+</ul>
+<p><strong>Result.</strong></p>
+<ul>
+<li>Completed the full path, 14 steps, with no restart.</li>
+<li>Vcc between moves: 5.12–5.19 V.</li>
+<li>Per-step minima: median 4630 mV, lowest 4412 mV.</li>
+</ul>
+<p><strong>Anomaly.</strong> The minimum reads <strong>exactly 4412 mV</strong> on 8 of 14 steps, and it also did on the 2026-09-26 unloaded test.</p>
+<ul>
+<li>That value corresponds to ADC count 255 in the bandgap method (1125300/255).</li>
+<li>An exactly repeating floor across independent events is suspicious. It may be a measurement artefact, for example the reference not settling under load, rather than the true minimum.</li>
+<li>To check: compare against the separate servo supply, and against a multimeter if one becomes available.</li>
+</ul>
+<p><strong>Takeaway.</strong> Visual motion is OK pending the user's confirmation. The experiments still require the separate supply (R-A2).</p>
+<h3 id="follow-up-larger-step-motion-check-passed">Follow-up: larger-step motion check, <strong>passed</strong></h3>
+<p><strong>Why.</strong> The user reported hearing the motor during the 1° ramp but seeing little motion. Likely causes:</p>
+<ul>
+<li>10 µs steps sit at the SG90's typical ~10 µs dead band;</li>
+<li>±4° is only ±5 mm at the pivot.</li>
+</ul>
+<p><strong>Test.</strong> 1500 → 1600 → 1400 → 1500 µs (≈ ±9°, ±1.2 cm at the pivot), holding 4 s per position. 4.2 V cut-off.</p>
+<p><strong>Result.</strong></p>
+<ul>
+<li>Completed with no restart. Minimum Vcc per move: 4412, 4483 and 4611 mV.</li>
+<li><strong>The user confirms the arm moved as expected, the ruler swayed, and there were no stalls.</strong></li>
+<li>The servo, horn, arm and pivot chain is mechanically verified under load.</li>
+</ul>
+<p><strong>Note for the firmware and the designer.</strong> Commands finer than about 10 µs may be ignored by the servo (dead band). Excitation signals should use amplitudes well above it; ±5° is about ±55 µs.</p>
+<hr />
+<h2 id="2026-09-27-sun-servo-moved-to-a-separate-supply-dip-eliminated">2026-09-27 (Sun): servo moved to a separate supply, dip eliminated</h2>
+<h3 id="change">Change</h3>
+<p>The servo is now powered from the kit's <strong>ELEGOO breadboard power module</strong>, fed by the kit's 9 V 1 A adapter. Connections:</p>
+<ul>
+<li>servo red → a pin on the module's fixed 5 V output block;</li>
+<li>servo brown → the module's GND row;</li>
+<li>UNO GND → the module's GND row (shared ground);</li>
+<li>UNO 5V → nothing.</li>
+</ul>
+<p>The UNO stays on USB. No breadboard or cable cutting was needed. <code>docs/hardware_setup.md</code> §6 has been rewritten to document this wiring; the phone-charger method is kept as an alternative.</p>
+<h3 id="evidence-2">Evidence</h3>
+<p>Same moves as the earlier UNO-powered test (1600 / 1400 / 1500 / 1450 / 1550 / 1500 µs), with the same bandgap Vcc measurement on the UNO:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Servo supply</th>
+<th>Vcc at rest</th>
+<th>Minimum Vcc during moves</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>UNO 5V pin (2026-09-27, earlier)</td>
+<td>5.12–5.19 V</td>
+<td>4412–4611 mV (≈ 0.7 V dips)</td>
+</tr>
+<tr>
+<td><strong>Power module (now)</strong></td>
+<td>5091 mV</td>
+<td><strong>5068 mV on all 6 moves (0.02 V, i.e. 1 ADC count)</strong></td>
+</tr>
+</tbody>
+</table></div>
+<ul>
+<li>The user confirms the servo moved normally on all six moves.</li>
+<li><strong>Requirement R-A2 (separate servo supply, shared ground) is now met.</strong></li>
+<li>The 4412 mV &quot;floor&quot; seen earlier is no longer relevant to operation. Whether it was a true minimum or a measurement artefact is still unresolved, and it is not needed now.</li>
+</ul>
+<h3 id="next-2">Next</h3>
+<ul>
+<li>The software is being built in a parallel workstream (milestones M1–M6).</li>
+<li>Hardware still needed: the camera placement; the light gate and latency LED wiring (§6.2); the pivot bolt (waiting on the ruler's hole diameter).</li>
+<li>Also: a regulator heat check on the module after several minutes of excitation.</li>
+</ul>
+<hr />
+<h2 id="2026-09-27-sun-light-gate-and-latency-led-bring-up">2026-09-27 (Sun): light gate and latency LED bring-up</h2>
+<h3 id="setup-2">Setup</h3>
+<p>Breadboard wired per <code>hardware_setup.md</code> §6.2:</p>
+<ul>
+<li>photoresistor divider on A0 (10 kΩ);</li>
+<li>white gate LED on D7 (220 Ω);</li>
+<li>red latency LED on D8 (220 Ω).</li>
+</ul>
+<p>The sensors are powered from the UNO's 5V; the servo stays on the separate module. Test sketch: <code>firmware/io_test</code> (D7 on, D8 blinking at 1 Hz, A0 printed at 10 Hz).</p>
+<h3 id="failures-in-order-and-what-the-data-showed">Failures, in order, and what the data showed</h3>
+<ol>
+<li><strong>The A0 reading followed the red LED's 1 Hz blink</strong> (a square wave, 20 ↔ 65 counts), and the dynamic range was tiny (≤ 96).
+<ul>
+<li>The torch <em>lowered</em> the reading while the red LED <em>raised</em> it, so the coupling was electrical, not optical.</li>
+<li>Diagnosis: move the A0 jumper onto the + strip. After the user re-seated the strip's supply jumper in the UNO's <strong>5V</strong> pin (it had been near RESET/IOREF), the strip read a steady 1023 (5.00 V).</li>
+</ul>
+</li>
+<li><strong>After that fix, A0 read ≈ 0–5 regardless of light.</strong> The user found the <strong>photoresistor was also on the − strip</strong>, so both divider elements went to ground. The photoresistor was moved to the + strip with USB unplugged (the strips are adjacent, so a moving leg could short 5V to GND).</li>
+</ol>
+<h3 id="result-32-s-test-medians-over-the-middle-8-s-of-each-10-s-phase">Result (32 s test; medians over the middle 8 s of each 10 s phase)</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Condition</th>
+<th>Median A0</th>
+<th>IQR</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Room light</td>
+<td>657</td>
+<td>644–671</td>
+</tr>
+<tr>
+<td>Torch</td>
+<td>941</td>
+<td>937–942</td>
+</tr>
+<tr>
+<td>Finger covering</td>
+<td>141</td>
+<td>133–175</td>
+</tr>
+</tbody>
+</table></div>
+<p>There is no longer any coupling to the latency LED. Covered vs lit differ by about 800 counts, which is ample for thresholding with hysteresis.</p>
+<h3 id="lessons">Lessons</h3>
+<p>These are now in <code>hardware_setup.md</code> §6.2 and §5:</p>
+<ul>
+<li>a sensor strip fed from the wrong UNO header pin gives a weak, load-dependent supply;</li>
+<li>check that the divider's two elements are on <strong>opposite</strong> strips;</li>
+<li>the photoresistor sees stray light, so shield it and keep it away from the latency LED.</li>
+</ul>
+<h3 id="next-3">Next</h3>
+<ul>
+<li>Final placement of the gate (LED on the backdrop at vane height, photoresistor on a stand facing it, with a blinker tube) and of the latency LED (top-right of the frame), using male-to-female extensions.</li>
+<li>Resume the software workstream after the usage-limit reset. It stopped mid-M1 on its own branch.</li>
+</ul>
+<hr />
+<h2 id="2026-09-27-sun-m1-identification-core-finished-speed-timing-fixes-tests">2026-09-27 (Sun): M1, identification core finished: speed, timing fixes, tests</h2>
+<h3 id="decisions-2">Decisions</h3>
+<ol>
+<li><strong>Compiled batch integrator (numba) with a NumPy reference kernel.</strong> The fused NumPy kernel alone (no dataclasses, targets precomputed, one clip) was only 1.2–1.3× faster than the old broadcasting <code>rhs</code>: at B = 77 hypotheses the cost is Python/NumPy call overhead per RK4 stage, not arithmetic. A scalar RK4 loop compiled with numba removes that overhead. numba is an optional extra (<code>pip install -e &quot;.[fast]&quot;</code>, installed in CI); without it the NumPy kernel runs. A test checks the two kernels agree to 1e-10.</li>
+<li><strong>Servo target evaluated at the RK4 stage times.</strong> The old batch integrator held the (linearly interpolated) command constant over each step, which adds a lag of dt/2. The model's dead time therefore depended on dt (it absorbed 1 ms at dt = 2 ms, 2 ms at dt = 4 ms). Targets are now computed on the half-step grid; measured against the ZOH <code>Plant</code> the residual lag is 0.000 ms at dt = 1, 2 and 4 ms (it was +0.50, +1.00, +2.00 ms).</li>
+<li><strong>Fit compares centroids at mid-exposure.</strong> A blurred centroid is the time-average pose over the exposure, i.e. the pose at t_capture − exposure/2 (the camera model test already checks this). <code>Record</code> now carries <code>exposure</code> and the fit uses <code>t_mid</code>. Without it the fitted dead time absorbs half the exposure (2 ms at −8 exposure).</li>
+<li><strong>Default fit step dt = 4 ms</strong> (was 2 ms). Kappa and damping estimates agree to within 3% of their own σ between dt = 2 and 4 ms; the omega_n/dead-time split moves along its known ridge (39.2/14.3 ms vs 40.2/15.3 ms: the effective lag 2ζ/ω_n + d is the same to 0.1 ms). Held-out NRMSE 0.01148 at both.</li>
+<li><strong>Plant uses a scalar (math-module) RK4 step</strong> with the same equations as the broadcasting <code>rhs</code>; a test checks it to 1e-12, and the R-M1–R-M4 physics tests now exercise it. This was needed for the E2 campaign, where generating the &quot;true&quot; records was the next bottleneck.</li>
+</ol>
+<h3 id="evidence-chirp-5-052-f₀-20-s-seed-3-held-out-chirp-15-s">Evidence (chirp ±5°, 0.5–2 f₀, 20 s, seed 3; held-out chirp 15 s)</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th></th>
+<th>before</th>
+<th>after</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>simulate_batch</code>, B = 77, 3 s window, dt = 2 ms</td>
+<td>678 ms</td>
+<td>43 ms (numba), 552 ms (NumPy)</td>
+</tr>
+<tr>
+<td>same at dt = 4 ms</td>
+<td>336 ms</td>
+<td>18 ms (numba), 251 ms (NumPy)</td>
+</tr>
+<tr>
+<td>full fit (7 windows, 2 stages + re-weighting)</td>
+<td>69.7 s</td>
+<td>1.5 s (dt = 4 ms)</td>
+</tr>
+<tr>
+<td>held-out NRMSE evaluation</td>
+<td>16.5 s</td>
+<td>0.08 s</td>
+</tr>
+<tr>
+<td>generating the 35 s of SimWorld records</td>
+<td>8.2 s</td>
+<td>0.95 s</td>
+</tr>
+<tr>
+<td>full test suite</td>
+<td>58 s</td>
+<td>14 s (before the new tests)</td>
+</tr>
+</tbody>
+</table></div>
+<p>Fit after the changes (dt = 4 ms): κ +0.00% (z = +0.5), β −20% (σ 23%), μ +8% (σ 23%), η +24% (σ 27%), ω_n +0.6% (σ 15%), dead time +2% (σ 37%); all |z| &lt; 1. Held-out NRMSE fitted 0.01148 vs true parameters 0.01142.</p>
+<h3 id="surprise">Surprise</h3>
+<ul>
+<li>With only <strong>12 s</strong> of the same chirp, every |z| is still &lt; 2 but the held-out NRMSE is <strong>2.4× the truth's</strong> (0.017 vs 0.007): short records leave the damping split (β vs η) and the servo split poorly determined, and those errors grow over a 3 s open-loop horizon. This is the gap the experiment designer (M3) has to close.</li>
+<li>The <strong>dead time is the weakest parameter</strong> (σ ≈ 37% from 20 s of chirp). Near 1 Hz only the effective lag is identifiable. R-I1 asks for 5% on dead time; the E2 campaign will measure whether any protocol reaches it before the requirement is revisited.</li>
+</ul>
+<h3 id="tests-added-teststest_identificationpy-12-tests">Tests added (<code>tests/test_identification.py</code>, 12 tests)</h3>
+<p>Geometry round trip at three camera rolls plus offsets; circle fit from a ±40° arc with 0.3 px noise (centre &lt; 0.5 px, radius &lt; 1%); scalar vs broadcasting RK4; numba vs NumPy kernels; <code>delayed_target</code> shapes; batch model vs ZOH <code>Plant</code> at dt = 2 and 4 ms (φ RMS &lt; 0.01°, θ RMS &lt; 0.03°, |lag| &lt; 0.2 ms); fit recovery (κ within 1%, all |z| &lt; 4, noise re-weighting near the true noise); held-out NRMSE &lt; 1.25 × truth; mid-exposure times.</p>
+<h3 id="next-4">Next</h3>
+<p>M2: rig firmware and the serial link.</p>
+<hr />
+<h2 id="2026-09-27-sun-m2-rig-firmware-and-serial-link-no-hardware-touched">2026-09-27 (Sun): M2, rig firmware and serial link (no hardware touched)</h2>
+<p>The user is rewiring the rig, so everything here was built and tested against a software fake of the board. Nothing was uploaded and no port was opened.</p>
+<h3 id="decisions-3">Decisions</h3>
+<ol>
+<li><strong><code>firmware/rig/rig.ino</code> implements protocol v1</strong> (<code>firmware/README.md</code>): <code>S</code>, <code>P</code>, <code>L</code>, <code>V</code>, plus <code>A</code> (raw gate reading) and <code>G</code> (gate thresholds) so the light gate can be calibrated without reflashing. Every command gets a reply with the board's <code>micros()</code>; the <code>s</code> acknowledgement costs ≈ 16 bytes per command, i.e. 0.8 kB/s at 50 Hz against 11.5 kB/s of link capacity, and gives command timing on the board clock.</li>
+<li><strong>The loop never blocks</strong> except in <code>V</code> (2 ms reference settling), so gate edges are stamped within ≈ one <code>analogRead</code> (0.12 ms). Gate polarity follows the wiring in <code>hardware_setup.md</code> (a blocked beam reads low).</li>
+<li><strong>No firmware watchdog-to-centre.</strong> If the host stalls, the servo holds its last pulse; snapping to centre would itself jolt the pendulum. The host-side safety stop (R-C2) is the protection.</li>
+<li><strong>Clock map = offset + rate</strong>, fitted by least squares on the fastest 30% of pings (Cristian). The UNO's ceramic resonator can be off by ~0.1%, which is 1 ms of drift per second, so the rate is fitted whenever the pings span ≥ 5 s. The uncertainty reported is the worst-case Cristian bound RTT_min/2.</li>
+<li><strong>Resets start a new clock epoch.</strong> <code>micros()</code> restarts at a reset, so ping samples from before a reset are never mixed with samples after it; <code>unexpected_resets</code> counts boot notices after the first (R-A2 evidence).</li>
+<li><strong>Two software limits on the servo command:</strong> R-A1's 60° and a lower <code>excitation_cap_deg</code> (default 10°) in <code>configs/rig.yaml</code>, applied by <code>ServoActuator</code> before the µs mapping. Note that the firmware's own 1000–2000 µs clamp is ≈ ±45°, tighter than R-A1.</li>
+<li><strong>Servo zero trim, gain and direction are calibrated, not assumed:</strong> <code>fit_servo_map</code> fits them from a servo sweep measured by the camera (used by M4's calibration).</li>
+</ol>
+<h3 id="evidence-3">Evidence</h3>
+<ul>
+<li><code>arduino-cli compile</code>: UNO 4814 B flash / 309 B RAM; Mega 2560 5950 B / 420 B (the bandgap multiplexer setting differs on the Mega and is handled with <code>#if</code>).</li>
+<li><code>tests/test_serial_link.py</code> (10 tests, ≈ 2 s, stable over 5 repeated runs): the fake board has a 2e-4 clock-rate error, asymmetric 1.2 / 2.1 ms delays with jitter, and a <code>micros()</code> start 150 ms before the 32-bit wrap. The fitted map puts true board time within RTT_min/2 + 1 ms of host time, across the wrap and across a simulated reset; gate edges and LED toggles land at their true host times within the same bound. On synthetic ping data with a 0.15% rate error, the rate is recovered to 1e-5 and the offset within the Cristian bound (&lt; 2 ms, R-S6).</li>
+</ul>
+<h3 id="open">Open</h3>
+<ul>
+<li>The real USB round trip on the UNO (16U2 bridge) is not yet measured; R-S6's 2 ms needs RTT_min ≤ 4 ms. E1c will measure it.</li>
+<li>The servo direction sign (<code>direction</code> in <code>rig.yaml</code>) is a placeholder until the calibration sweep.</li>
+</ul>
+<h3 id="next-5">Next</h3>
+<p>M3: experiment design and the simulated E2 campaign.</p>
+<hr />
+<h2 id="2026-09-27-sun-m3-experiment-design-and-the-simulated-e2-campaign-h1-in-simulation">2026-09-27 (Sun): M3, experiment design and the simulated E2 campaign (H1 in simulation)</h2>
+<h3 id="what-was-built">What was built</h3>
+<ul>
+<li><code>pal.design.library</code>: sines (2/4/6° × 0.5–2 f̂₀), two-tone multisines, resonant bursts (sine for 40% of the segment, then hold) and hold; frequencies follow the current estimate f̂₀.</li>
+<li><code>pal.design.optimal</code>: posterior-averaged Bayesian D-optimal selection. Fisher information from batched finite-difference sensitivities of θ and φ at 30 fps, around the current state estimate, with the segment's initial state removed as a nuisance (Schur complement); score = mean over 8 posterior samples of log det(P_post + F). Safety (R-I3): reject if predicted |θ| &gt; 60° under any sample.</li>
+<li><code>pal.identification.fit</code>: Gaussian priors (<code>DEFAULT_PRIOR</code>: κ 4.5 ± 1.0, deliberately not the simulator's 4.834; damping and servo weak), so the Laplace covariance is a proper posterior even when an experiment says nothing about a parameter.</li>
+<li><code>pal.design.session</code>: segments run back to back into one continuous record (the servo state at a segment start depends on the previous commands); <code>end_state</code> propagates the last window's fitted state to &quot;now&quot;.</li>
+<li><code>experiments/e2_sim_campaign.py</code> (flags: <code>--seeds --sets --budget --segment --workers</code>), <code>analysis/stats.py</code> (<code>summarise_e2</code>), <code>pal.stats</code> (bootstrap CI, paired Wilcoxon).</li>
+</ul>
+<h3 id="campaign-protocol-as-run">Campaign protocol (as run)</h3>
+<p>3 parameter sets (nominal; high friction β 0.10, μ 0.08; short pendulum κ 6.5) × 20 seeds, each seed perturbing all six true parameters by 10% (log-normal) → 60 units × 4 protocols (free decay from 20°; ±5° chirp 0.5–2 f₀,prior over the whole budget; random safe library choice; D-optimal). Budget 30 s in 5 s segments; fit after every segment; held-out set per unit (multisine 15 s, free decay from 25°, burst) never used for fitting; metric NRMSE at a 3 s horizon. The noise floor = the same score with the true parameters. 240 jobs, 12 min on 10 processes.</p>
+<h3 id="failure-found-and-fixed-first-20-seed-run-runs20260927-020722_e2_sim_campaign">Failure found and fixed (first 20-seed run, <code>runs/20260927-020722_e2_sim_campaign</code>)</h3>
+<ul>
+<li><strong>One R-I3 violation: 60.6°.</strong> A D-optimal segment ended with the pendulum swinging at 59°; every candidate for the next segment then predicted &gt; 60° (even &quot;hold&quot;, because the swing was already there), so the fallback &quot;hold&quot; ran and peaked at 60.6°. Fix: a <strong>terminal constraint</strong>: candidates must also leave the swing amplitude (energy-equivalent) ≤ 45° at the segment end. Re-run below: <strong>0 violations</strong>; 177 D-optimal and 104 random candidates rejected over the campaign; peak |θ| 57.3°. Predicted vs actual peak |θ| of the chosen segments: median difference 0.07°.</li>
+<li><strong>Metric fix:</strong> the effective servo lag was first scored as 2ζ/ω_n + d, a first-order approximation off by ~0.4 ms at 1 Hz; it is now the servo's phase delay at the true f₀.</li>
+</ul>
+<h3 id="results-runs20260927-022330_e2_sim_campaign-summarytxt">Results (<code>runs/20260927-022330_e2_sim_campaign</code>, summary.txt)</h3>
+<p>Held-out NRMSE₃ ratio to the noise floor (median over 60 units):</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>protocol</th>
+<th>5 s</th>
+<th>10 s</th>
+<th>15 s</th>
+<th>20 s</th>
+<th>30 s</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>free decay</td>
+<td>3.26</td>
+<td>3.74</td>
+<td>4.63</td>
+<td>4.04</td>
+<td>4.56</td>
+</tr>
+<tr>
+<td>chirp</td>
+<td>3.27</td>
+<td>2.10</td>
+<td>1.018</td>
+<td>1.009</td>
+<td>1.003</td>
+</tr>
+<tr>
+<td>random</td>
+<td>2.15</td>
+<td>1.42</td>
+<td>1.085</td>
+<td>1.051</td>
+<td>1.006</td>
+</tr>
+<tr>
+<td><strong>D-optimal</strong></td>
+<td><strong>1.096</strong></td>
+<td><strong>1.022</strong></td>
+<td>1.015</td>
+<td>1.007</td>
+<td>1.004</td>
+</tr>
+</tbody>
+</table></div>
+<ul>
+<li>Time to get within 10% of the floor: D-optimal median <strong>5 s</strong> (never: 0/60), chirp 15 s (0/60), random 15 s (8/60), free decay never in 48/60 (the servo is unidentifiable without servo motion).</li>
+<li>Paired Wilcoxon D-opt − chirp: −0.029 at 5 s, −0.014 at 10 s (both p ≈ 2e-11); no significant difference from 20 s on (p &gt; 0.4). D-opt − random is negative at every checkpoint (p ≤ 5e-4 up to 25 s).</li>
+</ul>
+<p><strong>H1 as specified is NOT supported.</strong> H1 says D-optimal reaches the chirp's 30 s NRMSE in ≤ 50% of the time. Per unit, D-optimal reached the chirp's final NRMSE within 15 s in <strong>40%</strong> of units [95% CI 28–52%] (median 25 s, never in 21/60). The reason is visible in the table: the chirp ends at 1.003 × the noise floor, so &quot;reaching&quot; it is decided by third-decimal noise. A post-hoc tolerance of 5% (chosen after seeing the data, reported as such) gives 92% [85–98%] for D-optimal vs 72% for the chirp itself at 15 s. The honest reading: in simulation D-optimal gets to the floor about 3× sooner (5 s vs 15 s), but H1's criterion, pinned to the chirp's <em>final</em> value at a 30 s budget, cannot show it. A budget at which the chirp is not yet at the floor (≈ 10–15 s), or a floor-relative criterion, would test the claim properly; that is a change to H1 and needs the owner's decision, so it is only proposed here.</p>
+<p><strong>R-I1 (frozen) fails for every protocol.</strong> At 30 s: κ within 5% in 100% of units for all protocols (median error 0.0%), but ω_n within 5% only 33–50% and dead time 13–18% (median errors 5–7% and 14–20%): near 1 Hz only the servo's total phase delay is identifiable, not its split into ω_n and dead time. That delay is within 5% in <strong>100%</strong> of units (chirp, random, D-opt; median error 1.1–1.2%). Damping within 20% (D-opt): β 97%, μ 72%, η 100%. All-pass rate as frozen: D-opt 13%, chirp 8%. With the phase delay replacing ω_n and dead time: D-opt 72%, chirp 73%, still short of 90%, now limited by μ. See the change-log row added to <code>requirements.md</code> (proposal, not applied).</p>
+<p><strong>R-I2 coverage</strong> (pooled over the 6 parameters, 95% intervals): chirp 92%, random 92%, D-opt 88% (&lt; 90%). The shortfall is the servo: dead-time coverage 70% and the derived phase delay only 12–35% covered: its estimate is ~1% (≈ 0.5 ms) biased while its posterior sd is 0.3–0.5%. The model and simulator share equations, so the bias comes from what differs: the linear-interpolation + Tc/2 command model vs the true ZOH, or the blur/mid-exposure approximation at high angular rates. Not yet resolved.</p>
+<h3 id="other-numbers">Other numbers</h3>
+<p>Fit median 1.35 s (grows with record length; 30 s ≈ 10 windows); D-optimal design 3.4 s per segment (33 candidates × 8 posterior samples × 11 perturbations, 5 s horizon). D-optimal choices: 6° sines near f̂₀ dominate (316 of 360), then 4° sines, 3° two-tones and 6° bursts, i.e. the most signal the safety constraints allow.</p>
+<h3 id="next-6">Next</h3>
+<p>M4: camera, perception, calibration and the hardware scripts.</p>
+<hr />
+<h2 id="2026-09-27-sun-m4-camera-perception-calibration-hardware-rig-and-sensor-validation-scripts-built-on-fakes">2026-09-27 (Sun): M4, camera, perception, calibration, hardware rig and sensor-validation scripts (built on fakes)</h2>
+<p>The hardware was in use, so nothing here opened a port or the camera. Every script has a <code>--fake</code> mode that runs the real serial-link and camera-thread code against <code>FakeBoard</code> and <code>FakeVideoSource</code>, whose frames are rendered from a simulated pendulum driven by the servo commands the fake board receives (with a deliberately wrong &quot;true&quot; servo trim of −18 µs, gain 0.093°/µs, camera roll 1.5° and capture latency 65 ms, so the calibration and latency scripts have something to find).</p>
+<h3 id="built">Built</h3>
+<ul>
+<li><code>pal.hw.camera_cv</code>: DirectShow capture thread, manual exposure (−8 ≈ 4 ms), host arrival stamps; <code>t_capture = t_arrival − capture_latency</code>, where <code>capture_latency</code> is a <strong>placeholder (0) until E1c measures it</strong>.</li>
+<li><code>pal.perception.markers</code>: HSV boxes (hue wrap supported), largest blob, subpixel centroid from binary-mask moments, tracking window around the last detection (colour conversion only on a 120 px crop: 4 ms/frame for both markers vs 15 ms on the full frame).</li>
+<li><code>pal.perception.calibration</code>: servo axis + arm radius from a circle fit of the pivot marker's settled positions during a slow servo sweep; px_per_m from the measured 0.077 m arm; camera roll from the pendulum's rest direction (gravity); servo gain/direction/trim from the settled arm angles. Output → <code>configs/rig_calibration.yaml</code>, overlaid on <code>rig.yaml</code> by <code>load_rig_config</code>.</li>
+<li><code>pal.hw.rig.HardwareRig</code>: Clock / Actuator / MarkerSensor on the real rig (hybrid sleep + spin for sub-ms command timing); the same <code>run_open_loop</code>, <code>ExperimentSession</code> and closed-loop runner work on it.</li>
+<li>Scripts: <code>calibrate_rig.py</code>, <code>e0_camera.py</code> (R-S1/R-S2), <code>e1a_static_angle.py</code> (R-S3, interactive), <code>e1b_period.py</code> (R-S4), <code>e1c_latency.py</code> (R-S5/R-S6, auto-finds the LED region). Analysis in <code>pal.validation</code> (unit-tested).</li>
+</ul>
+<h3 id="changes-from-the-main-sessions-hardware-findings-same-day">Changes from the main session's hardware findings (same day)</h3>
+<ul>
+<li><strong>Excitation cap now off by default</strong> (<code>safety.excitation_cap_deg: null</code>): the servo has its own supply and the UNO's Vcc dip fell from ~0.7 V to 0.02 V (R-A2 met). The flag stays.</li>
+<li><strong>Light gate is polarity-agnostic.</strong> Measured on the rig: covered 141, room 657, torch 941 counts (reading rises with light). Firmware <code>G &lt;blk&gt; &lt;clr&gt;</code> takes thresholds whose order sets the polarity, <code>C &lt;0|1&gt;</code> records clear/blocked levels and places the thresholds at 2/3 and 1/3 of the way, and <code>A n</code> averages readings. Defaults 300/450. Compiled: UNO 5478 B / 327 B RAM.</li>
+<li><strong>The port is opened with DTR/RTS low</strong> (no UNO reset, the servo keeps its position); <code>serial.reset_on_open</code> restores the old behaviour.</li>
+</ul>
+<h3 id="evidence-fakes-and-synthetic-frames">Evidence (fakes and synthetic frames)</h3>
+<ul>
+<li>Marker centroids on rendered frames (7 and 11 px discs, 2-level noise): median error &lt; 0.06 px.</li>
+<li>Calibration on synthetic data (roll −2°, trim +25 µs, reversed direction, 0.3 px noise): axis within 0.5 px, px_per_m within 1%, roll within 0.1°, trim within 2 µs. On the fake rig end to end: roll 1.52° (true 1.5), trim −17.6 µs (−18), gain 0.0934°/µs (0.093), px_per_m 795.7 (800).</li>
+<li>E1a dry run without calibration: RMS error 1.48° with a +1.48° mean offset, i.e. exactly the fake camera roll, which is why E1a must run after <code>calibrate_rig.py</code>.</li>
+<li>E1b dry run: camera vs gate period +0.018% and +0.027% (R-S4 bound 0.2%). One earlier dry run gave +0.6%; after adding a plausibility filter (drop periods &gt; 20% from the median, which a spurious or missed passage produces) it did not recur. Its cause was not pinned down, so E1b on hardware should keep the raw passages (they are logged).</li>
+<li>E1c dry run: capture latency 71 ± 17 ms estimated vs 65 ms true (the estimate includes a few ms of frame processing); clock uncertainty 1.7 ms.</li>
+</ul>
+<h3 id="open-1">Open</h3>
+<ul>
+<li>None of this has touched the real webcam or board. The HSV boxes, exposure and the DirectShow manual-exposure call need checking with <code>e0_camera.py</code>.</li>
+<li>The period comparison needs camera frames timestamped consistently over ≥ 30 s; frame drops just remove crossings, but a stalled capture thread would stretch periods.</li>
+</ul>
+<h3 id="next-7">Next</h3>
+<p>M5: EKF and closed-loop control.</p>
+<hr />
+<h2 id="2026-09-27-sun-m5-ekf-with-delayed-frames-energy-shaping-control-safety-stop-simulation-fake-rig">2026-09-27 (Sun): M5, EKF with delayed frames, energy-shaping control, safety stop (simulation + fake rig)</h2>
+<h3 id="built-1">Built</h3>
+<ul>
+<li><code>pal.estimation.ekf.PendulumEKF</code> on [θ, ω, φ, φ̇] with the identified grey-box model. The filter lives at the time of the latest frame (mid-exposure), because frames arrive ~80 ms late and in order; each frame is fused after propagating with the logged commands (split at the command switch times, so the zero-order-held target is integrated exactly). <code>predict(t)</code> gives the state at now + actuation lag for the controller; this is where the latency is compensated. Joseph-form update, FD transition Jacobian, white-acceleration process noise on ω and φ̇.</li>
+<li><code>pal.control.energy.EnergyController</code>: pivot-acceleration law a_x = −c ω cos θ with c = c_ff + k_E (E* − E)/(gκ) + banded integral, c_ff cancelling the identified viscous/Coulomb/quadratic damping at the target amplitude; mapped to the servo through φ = asin(−a_x / (r ω₀²)) and saturated at ±10°. Target 0 = active damping. <code>AmplitudePID</code> baseline (needs only ω₀).</li>
+<li><code>pal.control.loop.run_closed_loop</code>: camera → EKF → controller → servo on any rig; <strong>R-C2 safety stop</strong>: |θ| (measured or predicted) &gt; 70° → command 0, abort, reason logged.</li>
+<li><code>experiments/e5_control.py</code>: simulated E5 (4 controllers × 3 targets × N seeds, each seed with its own 20 s chirp identification) and <code>--hardware</code> mode for the rig (<code>--fake</code> dry run).</li>
+</ul>
+<h3 id="failure-and-fixes-found-on-the-way">Failure and fixes found on the way</h3>
+<ul>
+<li><strong>The first energy controller never started the swing</strong>: from rest the sign of ω is noise and a high gain chattered the servo ±10° with the bob stuck at 1–2°. Fix: below 4° of amplitude the controller plays an open-loop ±4° sine at the identified ω₀ (start-up), then hands over.</li>
+<li><strong>The first E5 scoring was wrong, not the controller.</strong> It used the energy-equivalent amplitude from (θ, ω), which ripples by ±2° within each cycle while the pivot moves (the pivot exchanges energy with the bob), so 35° runs &quot;never settled&quot; although the actual swing peaks were 35.0–35.4° from 6 s on. Scoring now uses the |θ| turning points (<code>pal.validation.swing_peaks</code>), i.e. the amplitude a person would read.</li>
+</ul>
+<h3 id="evidence-simulation-runs20260927-032507_e5_control_sim-5-seeds-3-targets-4-controllers">Evidence (simulation, <code>runs/20260927-032507_e5_control_sim</code>, 5 seeds × 3 targets × 4 controllers)</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>controller</th>
+<th>15° rms / settle</th>
+<th>25° rms / settle</th>
+<th>35° rms / settle</th>
+<th>R-C1 (≤ 20 s)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>energy, identified model</td>
+<td>0.15° / 8.7 s</td>
+<td>0.09° / 5.6 s</td>
+<td>0.19° / 4.2 s</td>
+<td>15/15</td>
+</tr>
+<tr>
+<td>energy, hand-measured model</td>
+<td>0.13° / 9.2 s</td>
+<td>0.06° / 5.5 s</td>
+<td>0.12° / 4.2 s</td>
+<td>15/15</td>
+</tr>
+<tr>
+<td>amplitude PID</td>
+<td>0.04° / 13.6 s</td>
+<td>0.07° / 14.9 s</td>
+<td>0.11° / 15.4 s</td>
+<td>15/15 (overshoot 7–8°)</td>
+</tr>
+<tr>
+<td>energy, no servo model + no prediction</td>
+<td>2.42° / –</td>
+<td>2.06° / –</td>
+<td>2.88° / –</td>
+<td>1/15</td>
+</tr>
+</tbody>
+</table></div>
+<p>(rms = RMS amplitude error over the last 10 s, median; settle = median time after which every peak stays within ±2°.)</p>
+<ul>
+<li><strong>H2 (simulation): supported.</strong> The same energy controller without the servo model and without prediction to now has a 94% larger RMS amplitude error (paired Wilcoxon p = 6e-5, n = 15; H2 needs ≥ 30%). Caveat: the ablation removes both the servo model and the latency compensation at once, and the simulator has exactly the model's structure.</li>
+<li><strong>Negative result:</strong> the identified model gave <strong>no advantage over the hand-measured one</strong> in simulation (0.15 vs 0.13°, 0.09 vs 0.06°, 0.19 vs 0.12°). Energy feedback with integral action tolerates wrong damping values; what the controller needs is ω₀ (a stopwatch gets it within 1%) and the latency/servo lag. The E5 comparison &quot;identified vs hand-measured&quot; is therefore not expected to separate on hardware either, unless the real servo lag differs a lot from the guess.</li>
+<li>EKF consistency (true model, 30 fps frames with 80 ± 10 ms latency, 0.3 px noise): NEES of (θ, ω) inside 1.2–3.0 for 2 dof in the test; normalised θ error 0.93–0.95. With the default process noise the full 4-state NEES is 2.1 (conservative). θ RMS error 0.09–0.10°.</li>
+<li>Latency compensation: 4 s after start the filter state is &gt; 50 ms old; its prediction to now + 60 ms has &lt; 20% of the error of using the latest frame's state, and lies within 3σ.</li>
+<li>R-C2: unit test with the threshold lowered to 20°: abort, last command 0, servo back to 0 within 1 s.</li>
+<li>Fake hardware rig: with the default rig.yaml (capture latency placeholder 0, uncalibrated) the controller aimed for 20° reaches 18.3° with 3.2° RMS error; with the fake rig's true latency (65 ms) and calibration it settles in 6.7 s with 1.2° RMS (camera-measured). <strong>So <code>capture_latency</code> from E1c and the calibration must be in rig.yaml before E5 runs on hardware.</strong></li>
+</ul>
+<h3 id="next-8">Next</h3>
+<p>M6: analysis figures and documentation.</p>
+<hr />
+<h2 id="2026-09-27-sun-m6-analysis-figures-and-documentation">2026-09-27 (Sun): M6, analysis, figures and documentation</h2>
+<ul>
+<li><code>analysis/figures.py</code> regenerates three figures from the logged runs (R-R2) into <code>docs/figures/</code>, with the numbers behind each as CSV and the source run names in <code>SOURCES.txt</code>:
+<ul>
+<li>E2 held-out NRMSE / noise floor vs time (median + IQR);</li>
+<li>parameter error per protocol at 30 s against the R-I1 tolerances;</li>
+<li>E5 RMS amplitude error per controller and target.</li>
+</ul>
+</li>
+<li><code>analysis/stats.py</code> summarises an E2 run (H1 strict and 5%-tolerance, floor ratios, paired Wilcoxon, R-I1 as frozen and with the phase-delay criterion, R-I2 coverage, R-I3 audit, timing). <code>pal.stats</code> holds the unit-tested bootstrap/Wilcoxon helpers.</li>
+<li>README (status, how to run every experiment in order, layout) and test plan v0.2 (script per experiment, E2/E5 as run) updated.</li>
+<li>The figures are committed for the report even though <code>runs/</code> is not; rerunning the two campaigns and <code>analysis/figures.py</code> reproduces them (the seeds are fixed).</li>
+</ul>
+<h3 id="open-issues-carried-forward">Open issues carried forward</h3>
+<ol>
+<li>H1 and R-I1 need the owner's decision on the proposed wording (requirements change log, 2026-09-27).</li>
+<li>The ~0.5 ms bias in the identified servo delay (poor R-I2 coverage for the servo) is unexplained.</li>
+<li>Nothing has run on the real rig yet: E0 → calibration → E1c (capture latency) → E1a/E1b → E3 → E5, in that order.</li>
+<li><code>SimulatedRigScene</code> has no photoresistor lag or noise, so the E1b dry run is optimistic.</li>
+</ol>
+<hr />
+<h2 id="2026-09-27-sun-software-merged-requirements-v11-owner-decision">2026-09-27 (Sun): software merged; requirements v1.1 (owner decision)</h2>
+<h3 id="merge">Merge</h3>
+<ul>
+<li>The M1–M6 branch was merged into main. The only conflict was this log (both sides appended), resolved by keeping both.</li>
+<li>Checked on main:
+<ul>
+<li><code>pip install -e &quot;.[dev,fast,analysis,hw]&quot;</code> into the project venv (numba 0.67);</li>
+<li>ruff clean;</li>
+<li><strong>76 tests pass</strong>;</li>
+<li>CI green;</li>
+<li><code>firmware/rig</code> compiles (5478 B flash / 327 B RAM on the UNO).</li>
+</ul>
+</li>
+</ul>
+<h3 id="decision-owner">Decision (owner)</h3>
+<p><strong>Revise the mis-specified criteria for hardware, and report the simulation against both versions</strong> (<code>requirements.md</code> v1.1, change log). Specifically:</p>
+<ul>
+<li><strong>R-I1:</strong> the servo's <em>combined phase delay</em> replaces ω_n and dead time. Near 1 Hz only the combined delay is identifiable. ω_n and dead time are reported with their posterior correlation.</li>
+<li><strong>H1:</strong> the comparison is now <em>time to within 10% of the noise floor</em>. The v1.0 comparison at the full budget mostly measured noise, because the chirp had already reached the floor.</li>
+<li><strong>Go/no-go item 3:</strong> gates only the control-relevant parameters, κ and the combined delay. <strong>Met in simulation:</strong> both within 5% in 100% of units. Damping parameters are reported with their uncertainties; μ is the limiting one (the revised R-I1 passes in 72% of units).</li>
+</ul>
+<h3 id="integrity-note">Integrity note</h3>
+<p>These revisions were made after seeing simulation data, and are labelled as such. They were made <strong>before any hardware identification data exists</strong>, so for E3/E5 they are pre-registered. The v1.0 results are still reported as negative results.</p>
+<hr />
+<h2 id="2026-09-28-mon-first-hardware-run-of-the-light-gate">2026-09-28 (Mon): first hardware run of the light gate</h2>
+<h3 id="setup-3">Setup</h3>
+<ul>
+<li><code>firmware/rig</code> flashed to the UNO on COM9.</li>
+<li><strong>Gate as built:</strong>
+<ul>
+<li>the white LED is at the bottom edge of the protractor sheet, about 28 cm below the pivot, near the ruler's tip;</li>
+<li>the photoresistor is in front of it;</li>
+<li>no vane.</li>
+</ul>
+</li>
+<li><strong>Recording:</strong> A0 polled with <code>A 1</code> over serial for 120 s, at about 244 Hz (4.1 ms per sample).
+<ul>
+<li>First the rod was held aside (beam clear), then released from about 30° and left to decay.</li>
+<li>Script and data were kept in the session scratchpad; this was a one-off check, not a logged experiment.</li>
+</ul>
+</li>
+</ul>
+<h3 id="results">Results</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Condition</th>
+<th>A0</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Beam clear</td>
+<td>851 ± 2</td>
+</tr>
+<tr>
+<td>Ruler resting in the beam</td>
+<td>≈ 245. Later it drifted to 155–250 as the room light and people moved; this does not matter, because the thresholds sit near the clear level.</td>
+</tr>
+<tr>
+<td>Fast pass</td>
+<td>Dips to 540–580 only, lasting 16–25 ms</td>
+</tr>
+<tr>
+<td>Last passes before stopping</td>
+<td>Dips to 300–400, lasting 50–240 ms</td>
+</tr>
+</tbody>
+</table></div>
+<ul>
+<li><strong>The photoresistor never settles during a fast pass.</strong> This is the expected lag (tens of ms), now seen directly.</li>
+<li><strong>Consequence:</strong> the configured thresholds of 300/450 produced only 4 board edges in the whole run.
+<ul>
+<li>Changed <code>configs/rig.yaml</code> to 720 blocked / 790 clear, just below the clear level.</li>
+<li>The midpoint <code>C</code> calibration (2/3 point ≈ 450) must not be used on this rig.</li>
+</ul>
+</li>
+<li><strong>Offline, 29 of 29 passes were detected</strong> with a 700-count threshold.
+<ul>
+<li>Full period from every other passage: <strong>0.933 ± 0.004 s</strong> (n = 27); 0.940 s at the start, 0.930 s at small amplitude.</li>
+<li>This gives κ ≈ 4π²/(gT²) ≈ 4.62 m⁻¹, i.e. L_eq ≈ 0.216 m, against 0.207 m from the ruler estimate (−4% in κ). <code>sim.yaml</code> is not changed: E3 identifies κ from the real rig.</li>
+</ul>
+</li>
+<li><strong>Swing duration: about 13 s (≈ 14 periods) from about 30°.</strong>
+<ul>
+<li>Acceptance check 3 (§8) needs over 20 s, so the pivot is still too lossy.</li>
+<li>The bolt pivot (§3.4) remains open; it needs the rod hole diameter.</li>
+</ul>
+</li>
+</ul>
+<h3 id="open-2">Open</h3>
+<ol>
+<li>Re-run the gate edges on the board itself at 720/790 (edge count = passages) during E1b.</li>
+<li>The E1b dry run (<code>SimulatedRigScene</code>) has no photoresistor lag. These numbers (a first-order lag of roughly 10–30 ms) could be added to it.</li>
+</ol>
+<h2 id="2026-09-28-mon-servo-zero-re-set-after-re-seating-the-horn">2026-09-28 (Mon): servo zero re-set after re-seating the horn</h2>
+<ul>
+<li>The white horn was taken off and put back, possibly a few spline teeth off, and the arm tip then sat slightly right of vertical at 1500 µs.</li>
+<li><strong>Method:</strong> the pulse was stepped down 5 µs every 4 s while the owner watched from the front. The hanging rod served as a plumb line: the arm is vertical when the servo shaft is directly above the rod's pivot.
+<ul>
+<li>The owner called &quot;ok&quot; at 1455–1460 µs; the arm was left at 1455 µs.</li>
+<li><code>configs/rig.yaml</code>: <code>servo_map.trim_us</code> changed from 0 to −45, about −4°. The owner then asked for 2 more steps left: <strong>1445 µs, trim −55 (about −5°)</strong>.</li>
+<li>The error is about ±1°, from typing lag and the servo's ≈5 µs dead band.</li>
+<li><code>calibrate_rig.py</code> refines the value from the green marker once the camera is up.</li>
+</ul>
+</li>
+<li><strong>Direction confirmed:</strong> a shorter pulse moves the arm tip left, seen from the front, so <code>direction: 1</code> (a longer pulse gives CCW, positive φ in the image) is right.</li>
+<li><strong>Bug seen:</strong> the first command after <code>SerialLink.open</code> is garbled. The board answers <code>?</code> with non-ASCII bytes, and the reply to that command never comes; the second command works. It happened on 3 of 3 opens.
+<ul>
+<li>It is probably line noise or a partial byte from the port opening with DTR/RTS held low.</li>
+<li><strong>To fix:</strong> send a throwaway line (for example a ping) right after opening, before any real command, and make <code>HardwareRig</code> do the same.</li>
+</ul>
+</li>
+</ul>
+<h2 id="2026-09-28-mon-arm-re-measured-servo-zero-on-connect-sony-α7-iv-as-camera">2026-09-28 (Mon): arm re-measured, servo zero on connect, Sony α7 IV as camera</h2>
+<ul>
+<li><strong>Arm radius, 0.077 → 0.072 m.</strong> The owner re-measured shaft centre → green dot at about 7.2 cm, after re-seating the horn. It was changed in <code>sim.yaml</code>, <code>rig.yaml</code> and the <code>GeometrySettings</code> default.
+<ul>
+<li>This length sets the pixel scale in calibration (<code>px_per_m = r_px / arm_radius</code>) and the pivot acceleration in the model, so its error passes straight into both.</li>
+<li>The simulation campaign (E2) used 0.077 m; its conclusions do not depend on a 7% change in r.</li>
+</ul>
+</li>
+<li><strong>The servo went back to 1500 µs after the USB was replugged.</strong> Replugging resets the UNO, and the firmware boots to 1500 µs; the trim lives on the host, not on the board.
+<ul>
+<li><strong>Fix:</strong> <code>open_hardware_rig</code> now commands φ = 0 (1445 µs with the trim) as soon as it connects, so an experiment's first command does not jolt the arm by 5°.</li>
+<li><code>SerialLink.open</code> now spends the garbled first line on a throwaway ping (bug logged earlier today).</li>
+<li>Checked on the rig: the first real command after opening was acknowledged.</li>
+</ul>
+</li>
+<li><strong>Camera: Sony α7 IV (ILCE-7M4)</strong> over USB, as a UVC &quot;USB Video Device&quot; (USB VID 054C, PID 0DE7). DirectShow index 2; index 0 is the built-in webcam, index 1 the OBS virtual camera.
+<ul>
+<li>Probed modes: only <strong>1280×720 MJPG at 30.0 fps</strong> is delivered (frame gaps: median 33.3 ms, max 40–65 ms). 1080p and 60 fps requests were ignored, because the body sets the stream format.</li>
+<li>To try next: USB Streaming → 1080p 60p on the body.</li>
+<li>Camera settings for the rig are in <code>hardware_setup.md</code> §7.2. <code>rig.yaml</code> has been switched to index 2 at 1280×720.</li>
+<li>The capture latency is unknown until E1c. It is likely larger than the webcam's, because of MJPEG encoding in the camera.</li>
+</ul>
+</li>
+<li><strong>First Sony frame (later the same day).</strong> The camera was on a tripod with a telephoto zoom, and an LED panel stood beside it.
+<ul>
+<li><strong>Framing is right:</strong> 85 × 48 cm at about 15 px/cm, twice the webcam's resolution. The green dot, the pink dot's swing and the red LED are all in view.</li>
+<li>Still 30 fps: the body is not yet set to 1080p60.</li>
+<li><strong>Marker detection failed on both colours</strong>, with the default HSV boxes:
+<ul>
+<li>green locked onto a green tape roll on the desk behind;</li>
+<li>magenta locked onto a pink or purple patch below the sheet;</li>
+<li>the pink dot itself is <strong>hue 4 (red)</strong>. The white sheet reads hue 16 / saturation 76, so the white balance is far off.</li>
+</ul>
+</li>
+<li>Fixes are listed in <code>hardware_setup.md</code> §7.2: clear the scene, light from the side, set a custom white balance, then re-measure or retune the HSV boxes.</li>
+<li>&quot;Largest blob in the whole frame&quot; is fragile with a cluttered background. A search ROI (region of interest) limited to the swing area would make it robust; consider adding one to the tracker config.</li>
+</ul>
+</li>
+<li><strong>Marker tracking works on the Sony (after the custom white balance and a higher ISO).</strong>
+<ul>
+<li><strong>Added <code>SearchRegion</code></strong> (<code>pal.perception.markers</code>, configured by <code>markers.region</code> in <code>rig.yaml</code>). The largest blob is taken among those at a physically possible position:
+<ul>
+<li>green on the arm circle around the servo axis (±25%);</li>
+<li>pink at the rod distance from the green dot (±10%);</li>
+<li>both below their centre (≤ 85°).</li>
+</ul>
+</li>
+<li><strong>Why it is needed:</strong> colour alone locked onto a wire (green) and a red object (pink), because the sketch-pen pink reads hue 0–4, next to the red LED, the red wires and the bricks.</li>
+<li><strong>Supporting changes:</strong>
+<ul>
+<li><code>detect_all()</code> returns every in-range blob;</li>
+<li><code>rig.yaml</code> geometry holds one-frame estimates: axis (660, 110) px, 1615 px/m, marker distance 0.255 m;</li>
+<li>the HSV boxes are set from the measured colours.</li>
+</ul>
+</li>
+<li>The <code>--fake</code> dry runs now use the simulated camera's own geometry and colours instead of <code>rig.yaml</code>'s real-camera values.</li>
+<li>Two tests added (clutter decoys; region geometry). <strong>All tests pass.</strong></li>
+<li><strong>Live check, 150 frames at rest:</strong> both markers found in 150/150; jitter 0.1 px; <strong>θ noise 0.024° RMS</strong>; 1.6 ms per frame.</li>
+</ul>
+</li>
+<li><strong>Owner's note:</strong> the lighting has changed (LED panel, higher ISO), so the photoresistor gate levels must be re-checked before E1b. This was added to <code>test_plan.md</code>.</li>
+</ul>
+<h2 id="2026-09-28-mon-rig-calibration-on-the-real-camera">2026-09-28 (Mon): rig calibration on the real camera</h2>
+<ul>
+<li>
+<p><strong>Run 1</strong> (<code>runs/20260928-170137_calibration</code>), with arm_radius 0.072 m. The fit was excellent: circle RMS 0.16 px, axis (661.3, 85.1), roll −0.98°, 0.0870 °/µs, trim −70.8 µs. But the scale came out at 1958 px/m.</p>
+<ul>
+<li><strong>Independent check:</strong> an FFT of the steel ruler's cm graduations in the same frame gave <strong>17.3 px/mm</strong> (17.1–17.9 across strips); reading the number labels gave 17.5.</li>
+<li>At that scale: arc radius 141 px → <strong>8.1 cm</strong>, and green → pink 412 px → <strong>23.7 cm</strong>. The hand measurements were 7.2 cm and 25 cm.</li>
+<li>The sums nearly agree (31.8 vs 32.2 cm), which is consistent with either a hand-measurement error or the green dot sitting about 1 cm off the pivot axle.</li>
+<li><strong>Owner decision:</strong> take 8.1 cm and 23.7 cm as the accurate values. The green dot is therefore treated as the pivot position.</li>
+<li>If the dot were off the axle, θ would carry an error of up to about 2° when φ ≠ θ. The H2/E3 fits would show this as a φ-dependent residual.</li>
+</ul>
+</li>
+<li>
+<p><strong>Run 2</strong> (<code>runs/20260928-170749_calibration</code>), with arm_radius 0.081 m, <strong>written to <code>configs/rig_calibration.yaml</code>:</strong></p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Quantity</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Axis</td>
+<td>(661.5, 84.4) px, 0.7 px from run 1</td>
+</tr>
+<tr>
+<td>Scale</td>
+<td><strong>1748 px/m</strong>, agrees with the ruler graduations</td>
+</tr>
+<tr>
+<td>Roll</td>
+<td>−0.94°</td>
+</tr>
+<tr>
+<td>Marker distance</td>
+<td>0.2355 m</td>
+</tr>
+<tr>
+<td>Servo gain</td>
+<td><strong>0.0859 °/µs</strong></td>
+</tr>
+<tr>
+<td>Trim</td>
+<td><strong>−67.8 µs</strong>; zero at 1432 µs, against the eye estimate of 1445</td>
+</tr>
+<tr>
+<td>Direction</td>
+<td>+1</td>
+</tr>
+<tr>
+<td>Circle RMS</td>
+<td>0.13 px</td>
+</tr>
+</tbody>
+</table></div>
+<ul>
+<li>Rest θ std was 0.69°: the pendulum was still swinging slightly 20 s after the sweep, and the pivot friction is still high. The roll comes from the mean, so this only adds noise.</li>
+</ul>
+</li>
+<li>
+<p><code>sim.yaml</code> / <code>rig.yaml</code>: arm_radius 0.081, marker_distance 0.237. This is a 12% change in r against the E2 simulation campaign (0.077); its conclusions are not sensitive to r at this level.</p>
+</li>
+</ul>
+<h2 id="2026-09-28-mon-e1c-camera-latency-on-the-sony-α7-iv-gono-go-item-2-fails">2026-09-28 (Mon): E1c camera latency on the Sony α7 IV: go/no-go item 2 fails</h2>
+<ul>
+<li><strong>Run:</strong> <code>runs/20260928-171222_e1c_latency</code>. 200 random LED toggles, all 200 detected. The LED region was found automatically at (350, 158, 12, 12). Sony α7 IV over USB (UVC), 1280×720 MJPG at 30 fps, DirectShow.</li>
+<li><strong>Toggle → frame arrival:</strong> <strong>median 163.6 ms</strong>, IQR 153.8–172.2 ms, minimum 145.9 ms.
+<ul>
+<li>Capture latency (median minus half a frame period) is <strong>≈ 147 ms ± 17 ms</strong>; <code>camera.capture_latency</code> is set to 0.147 in <code>rig.yaml</code>.</li>
+<li>The minimum of 146 ms means no frame arrives sooner than about 4½ frame periods after the event, which points to a pipeline inside the camera (encoding, USB streaming), not to host-side queueing.</li>
+</ul>
+</li>
+<li><strong>Clock offset uncertainty: 2.37 ms</strong> (R-S6 requires ≤ 2 ms), a marginal fail. Board clock rate 1.000094.</li>
+<li><strong>Verdict against the pre-registered criteria (v1.1, unchanged):</strong>
+<ul>
+<li>R-S5 go/no-go (median ≤ 150 ms): <strong>FAIL</strong> with this camera, 163.6 ms.</li>
+<li>R-S6: <strong>FAIL</strong> (marginal).</li>
+<li>These are reported as measured. The threshold is not being changed.</li>
+</ul>
+</li>
+<li><strong>Pre-registered response to a gate-2 failure:</strong> U5, an external webcam. Before buying, cheaper options are available:
+<ul>
+<li>run E1c on the built-in laptop webcam (the camera the plan was designed around);</li>
+<li>try a different capture backend (MSMF) with the Sony.</li>
+<li>The gate is decided on 5 Oct on whichever camera is used for E3/E5.</li>
+</ul>
+</li>
+</ul>
+<h2 id="2026-09-28-mon-capture-backend-first-hardware-identification-and-control-pilots">2026-09-28 (Mon): capture backend; first hardware identification and control (pilots)</h2>
+<h3 id="e1c-again-via-media-foundation-msmf">E1c again, via Media Foundation (MSMF)</h3>
+<ul>
+<li>Added <code>camera.backend</code> (<code>dshow</code> | <code>msmf</code>) to <code>CameraSettings</code> / <code>open_camera</code>. Device indices differ per backend; MSMF index 2 is the Sony.</li>
+<li><strong>Run:</strong> <code>runs/20260928-171944_e1c_latency</code>. Toggle → arrival <strong>median 153.3 ms</strong>, IQR 145.7–162.3, minimum 136.0, n = 200, none missed.
+<ul>
+<li>Capture latency is ≈ 137 ms: 10 ms better than DirectShow.</li>
+<li>Clock offset uncertainty 2.19 ms.</li>
+<li>Arrival jitter is worse: 41 of 3155 frame gaps over 50 ms, against 6 with DirectShow, although both run at 30.0 fps.</li>
+</ul>
+</li>
+<li><strong>Adopted MSMF</strong> (<code>rig.yaml</code>: <code>backend: msmf</code>, <code>capture_latency: 0.137</code>).</li>
+<li><strong>Go/no-go item 2 still fails</strong> (153 &gt; 150 ms); R-S6 still fails, marginally. Both are recorded as measured.</li>
+<li><strong>Owner decision:</strong> go ahead with the experiments on this camera and see what the results look like. The gate outcome stays as measured.</li>
+</ul>
+<h3 id="e3-pilot-experimentse3_identifypy-new">E3 pilot: <code>experiments/e3_identify.py</code> (new)</h3>
+<ul>
+<li>
+<p><strong>Script:</strong> one open-loop chirp on the rig, fitted with the default prior; writes <code>params.yaml</code> for E5. It aborts if |θ| &gt; 60°, and has a <code>--fake</code> dry run.</p>
+<ul>
+<li><code>_rig.py --fake</code> now uses the simulated camera's own latency (65 ms), not the real camera's.</li>
+</ul>
+</li>
+<li>
+<p><strong>Run:</strong> <code>runs/20260928-172500_e3_identify</code>. 20 s chirp, ±5°, 0.53–2.1 Hz.</p>
+<ul>
+<li>600 frames, <strong>100% with both markers</strong>; max |θ| 26°, max |φ| 7.4°.</li>
+</ul>
+</li>
+<li>
+<p><strong>Fit results</strong> (1.4 s), value ± posterior sd:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>κ</strong></td>
+<td><strong>4.6273 ± 0.0053 m⁻¹</strong>, so L_eq = 21.6 cm and the small-swing period = <strong>0.933 s</strong></td>
+</tr>
+<tr>
+<td>β</td>
+<td>0.000 ± 0.047</td>
+</tr>
+<tr>
+<td>μ</td>
+<td>0.000 ± 0.023</td>
+</tr>
+<tr>
+<td>η</td>
+<td>0.042 ± 0.020</td>
+</tr>
+<tr>
+<td>ω_n</td>
+<td>32.3 ± 4.5 rad/s</td>
+</tr>
+<tr>
+<td>dead time</td>
+<td>0.000 ± 0.007 s. The combined servo delay is ≈ dead + 2ζ/ω_n ≈ 43 ms</td>
+</tr>
+</tbody>
+</table></div>
+</li>
+<li>
+<p><strong>Independent cross-check:</strong> the light gate (no camera) measured 0.933 ± 0.004 s this morning. <strong>The camera-identified period agrees to better than 0.1%.</strong></p>
+</li>
+<li>
+<p><strong>Caveats:</strong></p>
+<ul>
+<li>σ_θ = 0.78° and σ_φ = 0.95° are far above the static noise (0.024°). That points to model mismatch; see the collision below.</li>
+<li>A dead time pinned at 0 suggests the 137 ms capture-latency correction may be slightly too large (E1c resolution ±17 ms).</li>
+</ul>
+</li>
+</ul>
+<h3 id="e5-pilot-energy-controller-identified-model-target-20-30-s">E5 pilot: energy controller, identified model, target 20°, 30 s</h3>
+<ul>
+<li><strong>Run:</strong> <code>runs/20260928-172547_e5_energy_identified_20deg</code>.
+<ul>
+<li>It entered the ±2° band at <strong>6 s</strong>. The amplitude reached 18.7° at 3–9 s, then <strong>settled at 15.0°</strong> for the rest of the run: final amplitude 15.0°, RMS error 5.0°, no abort, no reset.</li>
+<li>The servo command was steady at 2.9° peak. With the amplitude stuck, the energy error was constant, and the integral term only acts within 3° of the target.</li>
+</ul>
+</li>
+<li><strong>Cause (owner observation): the ruler collided with the white LED and photoresistor at the bottom of the swing,</strong> and the rod has a lot of play on its pivot. The collision caps the swing, which fits the flat 15.0° plateau, and it would also explain the high fit residuals.</li>
+<li><strong>Action (owner):</strong>
+<ol>
+<li>Move the gate parts clear of the swing.</li>
+<li>Reduce the play of the ruler on the pivot.</li>
+<li>Then repeat E3 and E5. Both runs above count as pilots, not campaign data.</li>
+</ol>
+</li>
+</ul>
+<h3 id="after-the-owners-rig-adjustments-same-day">After the owner's rig adjustments (same day)</h3>
+<ul>
+<li><strong>Owner's changes:</strong> the gate parts were moved clear of the swing and the ruler's play reduced; the camera did not move.</li>
+<li><strong>Check against the calibration:</strong>
+<ul>
+<li>camera scale and roll unchanged: rod 411.6 px against 411.7, rest θ −0.02°;</li>
+<li>but the servo zero read <strong>+0.7° off</strong>. Approaching from each side, the φ offset was 0.46–0.86°, hysteresis only ≈ 0.2°. The horn or arm was probably nudged.</li>
+</ul>
+</li>
+<li><strong>Recalibrated:</strong> <code>runs/20260928-173235_calibration</code>, written to <code>rig_calibration.yaml</code>.
+<ul>
+<li>trim −73.4 µs (was −67.8), 0.0855 °/µs, axis (662.4, 85.5), 1750 px/m, roll −1.07°, circle RMS 0.13 px;</li>
+<li>rest θ std <strong>0.05°</strong>, against 0.69° before: the pendulum now comes fully to rest within 20 s.</li>
+</ul>
+</li>
+<li><strong>E3 re-run <code>runs/20260928-173250_e3_identify</code> is INVALID: the Sony switched itself off 4 s into the run.</strong>
+<ul>
+<li>Its UVC device disappeared from Windows; the owner saw the camera power off.</li>
+<li>Only 123 of 600 frames arrived; the script still fitted them (κ 4.92 ± 0.07 from 4 s of small swing). <strong>Discard it.</strong></li>
+<li><strong>Fixes:</strong>
+<ul>
+<li><code>e3_identify.py</code> now marks a run invalid, and does not fit it, if the last frame is more than 1 s before the end or any gap exceeds 1 s;</li>
+<li><code>run_closed_loop</code> now makes a <strong>safety stop (hold 0) when no camera measurement arrives for 0.5 s</strong> (3 s allowed at start-up). Before this, a camera dropout left the energy controller pumping on open-loop EKF predictions.</li>
+<li>A test was added for the stall stop.</li>
+</ul>
+</li>
+</ul>
+</li>
+<li><strong>Camera power:</strong> see <code>hardware_setup.md</code> §7.2, step 6. Streaming for long periods needs the auto power-off and temperature settings raised, and ideally external power.</li>
+</ul>
+<h3 id="camera-restarted-re-aimed-recalibrated-first-successful-closed-loop-control">Camera restarted: re-aimed, recalibrated, first successful closed-loop control</h3>
+<ul>
+<li>
+<p><strong>After the owner restarted the Sony,</strong> an E3 run (<code>runs/20260928-173926_e3_identify</code>) showed a <strong>constant +11° offset in φ</strong>, while θ was fine.</p>
+<ul>
+<li>The camera had been nudged: both markers moved about +27 px in x and +7 px in y, while the rod length in pixels was unchanged (410.9 against 411.8).</li>
+<li>That run's servo parameters are invalid (σ_φ 11°); its κ = 4.657 is unaffected.</li>
+</ul>
+</li>
+<li>
+<p><strong>Two recalibrations:</strong></p>
+<ul>
+<li><code>runs/20260928-174142_calibration</code>: the pendulum was still swinging during the rest phase (rest θ std 5.1°) and the circle RMS was 0.24 px. The owner asked for a repeat.</li>
+<li><strong><code>runs/20260928-174305_calibration</code>, written:</strong> <code>--rest-wait 35</code>; axis (688.9, 89.2), roll −0.85°, trim −72.4 µs, 0.0852 °/µs, <strong>circle RMS 0.065 px</strong>, rest θ std 0.53°.</li>
+</ul>
+</li>
+<li>
+<p><strong>The fitted scale varies between runs</strong> (1704, 1748, 1750, 1792 px/m) because the ±30° sweep traces a short arc, and on a short arc the circle's radius and its vertical centre are strongly correlated.</p>
+<ul>
+<li>This is harmless for the experiments. θ uses only the green → pink direction and the roll; φ's zero depends on the horizontal axis position, which is well determined; and the search region uses the rod length in pixels, since marker_distance × px_per_m = measured px.</li>
+<li>Only reported metric distances are affected; for those, the ruler graduations (≈ 1740 px/m) are the reference.</li>
+<li><strong>To do:</strong> sweep wider (±40°) or fix the scale from the graduations.</li>
+</ul>
+</li>
+<li>
+<p><strong>E3:</strong> <code>runs/20260928-174336_e3_identify</code>. 599 frames, 100% with both markers.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Quantity</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>κ</td>
+<td><strong>4.6756 ± 0.0031</strong>, so the period = 0.928 s (0.5% from the light gate's 0.933 s, measured before the pivot was changed)</td>
+</tr>
+<tr>
+<td>β</td>
+<td>0 ± 0.034</td>
+</tr>
+<tr>
+<td>μ</td>
+<td>0 ± 0.015</td>
+</tr>
+<tr>
+<td>η</td>
+<td>0.031 ± 0.014</td>
+</tr>
+<tr>
+<td>ω_n</td>
+<td>42.8 ± 7.5</td>
+</tr>
+<tr>
+<td>dead time</td>
+<td>0.5 ± 6 ms</td>
+</tr>
+<tr>
+<td><strong>σ_θ</strong></td>
+<td><strong>0.48°</strong> (0.78° when the rod was colliding)</td>
+</tr>
+<tr>
+<td>σ_φ</td>
+<td>0.93°</td>
+</tr>
+</tbody>
+</table></div>
+</li>
+<li>
+<p><strong>E5, energy controller, identified model, target 20°:</strong> <code>runs/20260928-174421_e5_energy_identified_20deg</code>.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Metric</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>First inside ±2°</td>
+<td><strong>6.8 s</strong></td>
+</tr>
+<tr>
+<td>Settled (stays inside ±2°)</td>
+<td><strong>16.2 s</strong></td>
+</tr>
+<tr>
+<td>Overshoot</td>
+<td>1.4°</td>
+</tr>
+<tr>
+<td><strong>RMS amplitude error, last 10 s</strong></td>
+<td><strong>0.89°</strong></td>
+</tr>
+<tr>
+<td>Final amplitude</td>
+<td>19.6°</td>
+</tr>
+<tr>
+<td>Servo effort</td>
+<td>0.9° RMS</td>
+</tr>
+<tr>
+<td>Aborts / resets</td>
+<td>none</td>
+</tr>
+</tbody>
+</table></div>
+<ul>
+<li><strong>This is the first successful closed-loop run on hardware,</strong> despite the 137 ms camera latency, which fails go/no-go item 2.</li>
+<li>As a single trial, R-C1 (±2° inside 20 s) is met here. The requirement is ≥ 80% of trials at 15°, 25° and 35°, so it is not yet evaluated.</li>
+</ul>
+</li>
+<li>
+<p><strong>Arm vs pendulum phase:</strong> the owner observed that the arm and the ruler do not swing in phase. That is the driven-oscillator response the model contains: φ drives θ through the pivot acceleration. Measured from the E3 chirp (<code>runs/20260928-174336_e3_identify</code>), phase of θ relative to φ at the local drive frequency:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Drive frequency</th>
+<th>θ lags φ by</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0.73 Hz (below the 1.08 Hz natural frequency)</td>
+<td>6°</td>
+</tr>
+<tr>
+<td>1.07 Hz (at resonance)</td>
+<td>63°</td>
+</tr>
+<tr>
+<td>1.36 Hz (above)</td>
+<td>157°</td>
+</tr>
+<tr>
+<td>1.87 Hz (above)</td>
+<td>160°</td>
+</tr>
+</tbody>
+</table></div>
+<ul>
+<li>The expected pattern is ≈ 0° below resonance, 90° at resonance and approaching 180° above. The 63° at resonance is smeared, because the chirp sweeps through the window.</li>
+<li>In the 20° E5 run, the arm's fundamental <strong>leads</strong> θ by 65°, since the energy law pushes in phase with velocity.</li>
+</ul>
+</li>
+<li>
+<p><strong>The red latency LED is used only by E1c.</strong> Its result enters every other run as the constant <code>camera.capture_latency</code>. Latency may change when the camera restarts (as it did today), so a short E1c at the start of each session (about 30 toggles, 20 s) is worth adding.</p>
+</li>
+</ul>
+<h3 id="control-campaign-attempt-1-stopped-by-the-owner-and-the-safety-fixes-it-prompted">Control campaign attempt 1 (stopped by the owner), and the safety fixes it prompted</h3>
+<ul>
+<li>
+<p><strong>Campaign:</strong> 9 trials (15/25/35° × 3, shuffled), a 25 s pause between trials, controller <code>energy_identified</code>, params from <code>runs/20260928-174336_e3_identify</code>. It was preceded by a session latency check, <code>runs/20260928-174934_e1c_latency</code> (30 toggles): median 154.8 ms, capture ≈ 138 ms, the same as before; R-S6 1.62 ms PASS.</p>
+</li>
+<li>
+<p><strong>Trials completed before the owner stopped it:</strong></p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Target</th>
+<th>Run</th>
+<th>Settle</th>
+<th>RMS</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>15°</td>
+<td><code>175010</code></td>
+<td>10.2 s</td>
+<td>0.48°</td>
+<td>final 14.7°</td>
+</tr>
+<tr>
+<td>25°</td>
+<td><code>175113</code></td>
+<td>28.3 s</td>
+<td>5.1°</td>
+<td>first in band at 2.9 s <strong>because it started while still swinging from the previous trial</strong></td>
+</tr>
+<tr>
+<td>35°</td>
+<td><code>175215</code></td>
+<td>—</td>
+<td>—</td>
+<td><strong>safety stop at 18.9 s</strong>: estimated |θ| = 194.5°</td>
+</tr>
+<tr>
+<td>35°</td>
+<td><code>175307</code></td>
+<td>—</td>
+<td>—</td>
+<td>killed mid-run</td>
+</tr>
+</tbody>
+</table></div>
+</li>
+<li>
+<p><strong>Owner's observations:</strong></p>
+<ol>
+<li>Trials interfere, because 25 s is not enough for the (now freer) pivot to come to rest.</li>
+<li>The servo made strange strong motions and &quot;struggled to come to rest with large noise&quot;.</li>
+</ol>
+</li>
+<li>
+<p><strong>Diagnosis of the 35° stop:</strong></p>
+<ul>
+<li>The pink marker was missing for <strong>0.4 s at θ ≈ +33°</strong>: 7 frames, only at that angle, never at 25° or in E3. Probable cause: glare from the LED panel at that angle (to be checked with a still frame).</li>
+<li>The EKF coasted without θ. When the marker returned, the update threw the estimate (and ω) far off, the prediction reached 194°, and the estimated-θ safety stop fired.</li>
+<li>During that window the controller acted on a wrong state, which produced the sharp commands the owner saw.</li>
+</ul>
+</li>
+<li>
+<p><strong>Fixes, all with tests:</strong></p>
+<ul>
+<li><strong>EKF innovation gate</strong> (<code>EKFNoise.gate_sigma = 6</code>, <code>gate_min = 5°</code>): a measurement is rejected only if it is both &gt; 6σ and &gt; 5° from the prediction.
+<ul>
+<li>The first version, without <code>gate_min</code>, rejected the fake rig's constant 1.5° calibration offset and aborted a dry run; the real φ model mismatch (≈ 1°) would have done the same.</li>
+<li>Rejections are counted (<code>n_rejected</code>, <code>consecutive_rejects</code>).</li>
+</ul>
+</li>
+<li><strong><code>run_closed_loop</code> safety stops (hold 0):</strong>
+<ul>
+<li>the pendulum marker lost for 0.25 s while frames still arrive;</li>
+<li>5 consecutive gated frames;</li>
+<li>no camera measurement for 0.5 s (added earlier).</li>
+</ul>
+</li>
+<li><strong>Command slew limit, 200°/s.</strong> Normal control needs about 63°/s at ±10°, 1 Hz, so this only stops bursts from reaching the servo.</li>
+<li><strong><code>wait_for_rest()</code>:</strong> hold 0 and watch the camera until half the peak-to-peak of θ over 3 s is below 0.5°, logging every angle.</li>
+<li><strong><code>e5_control.py --hardware</code></strong> now does the following:
+<ol>
+<li>runs <code>--repeats</code> of every target × controller in a seeded shuffled order;</li>
+<li>waits for rest before each trial (and skips the trial if rest is not reached within 240 s);</li>
+<li>after each trial, holds 0 and <strong>records the free decay until rest</strong> (<code>decay</code> stream; data for H3);</li>
+<li>prints R-C1 per target.</li>
+</ol>
+</li>
+</ul>
+</li>
+<li>
+<p><strong>Open:</strong> check the glare at +33° with a still frame before running 35° again.</p>
+</li>
+</ul>
+<h3 id="camera-switched-off-again-zoom-changed-calibration-made-robust-to-it">Camera switched off again; zoom changed; calibration made robust to it</h3>
+<ul>
+<li><strong>The Sony switched itself off a second time</strong> while idle. On restart, the owner turned off lens OSS and SteadyShot.</li>
+<li>A static check with the ruler held at +41° found the pink marker in <strong>30/30 frames</strong>, with a wide colour margin: S 85–112 against a minimum of 60, V 118–209 against 60.
+<ul>
+<li>The 35° run's log shows 8 detected peaks at +35–36° before the loss; the 7 missing frames were its last ones.</li>
+<li>So the loss was <strong>a one-off interruption (probably the camera failing), not glare.</strong></li>
+</ul>
+</li>
+<li><strong>After the restart the view had changed:</strong> the sheet is 605 px wide instead of 690, i.e. <strong>about 12% zoomed out</strong>, and it shifted.</li>
+<li><strong>The first recalibration (<code>181151</code>) came out wrong:</strong> roll +8.8°, trim +41 µs.
+<ul>
+<li>Cause: the pink search region came from the <em>previous</em> calibration (rod 412 px ± 10%). The real marker was now at about 360 px and was rejected; a large red strip below the sheet at 433 px was accepted as &quot;pink&quot;.</li>
+<li>The second attempt (<code>181910</code>) still picked the strip, because the tolerance had been widened to 15% and the tracker chose the <strong>largest</strong> accepted blob. The new sanity check flagged it: rod/arm 3.28 against a metric 2.93.</li>
+</ul>
+</li>
+<li><strong>Fixes:</strong>
+<ul>
+<li><code>calibrate_rig.py</code> rebuilds the search region after the sweep, from the fresh circle and the <strong>metric rod/arm ratio in <code>rig.yaml</code></strong>, which does not change with zoom. It also prints a rod/arm sanity check that flags deviations over 8%.</li>
+<li><code>MarkerTracker</code> picks the accepted candidate <strong>closest to its expected distance</strong> (<code>SearchRegion.misfit</code>), not the largest.</li>
+<li>Pink HSV narrowed to hue 177–6 (the red strip and LED read ≈ 175).</li>
+<li><code>_rig.open_rig(tracker=...)</code> so a caller can update the search region mid-run.</li>
+<li>Tests added. The fake calibration recovers roll 1.49° (true 1.5°) and trim −18.5 µs (true −18).</li>
+</ul>
+</li>
+<li><strong>Good calibration: <code>runs/20260928-182223_calibration</code>, written to <code>rig_calibration.yaml</code>.</strong>
+<ul>
+<li>rod/arm <strong>2.880</strong> (earlier sessions 2.84–2.91);</li>
+<li>roll −0.77° (earlier −0.85 / −0.94);</li>
+<li><strong>trim −70.8 µs</strong>: earlier −72.4 / −73.4, so the horn has not moved;</li>
+<li>0.0837 °/µs, 1548 px/m (zoomed out), circle RMS 0.10 px, rest θ std 0.30°.</li>
+</ul>
+</li>
+<li><strong>Lesson:</strong> every camera restart can change the view (stabilisation, zoom), so <strong>calibrate after every camera restart</strong>, and check the rod/arm line.</li>
+</ul>
+<h3 id="the-servos-power-up-position-is-now-the-calibrated-vertical-eeprom-home">The servo's power-up position is now the calibrated vertical (EEPROM home)</h3>
+<ul>
+<li><strong>Owner's report:</strong> at rest the arm sat at the old position, not vertical. The trim lived only on the host: the firmware booted to 1500 µs after any reset or USB replug, and only an experiment's connect moved it to φ = 0.</li>
+<li><strong>Firmware: new command <code>H [us]</code>.</strong> It stores the home pulse width in EEPROM (magic byte + int16) and applies it; <code>setup()</code> writes the home <strong>before</strong> <code>servo.attach()</code>, so the very first pulse is already the home.
+<ul>
+<li>Compiled: 5750 B flash / 331 B RAM.</li>
+</ul>
+</li>
+<li><strong>Host:</strong>
+<ul>
+<li><code>SerialLink.set_home_us()</code>;</li>
+<li><code>open_hardware_rig</code> checks the board's home on every connect and updates it if it differs from <code>servo_map.to_us(0)</code>;</li>
+<li><code>calibrate_rig.py --write</code> stores the new home immediately;</li>
+<li><code>FakeBoard</code> supports <code>H</code>, and a test was added.</li>
+</ul>
+</li>
+<li><strong>Flashed and verified on the rig:</strong> home 1500 → 1429 µs, and still 1429 after a reset (boot notice seen).</li>
+<li><strong><code>experiments/check_calibration.py</code> (new, owner's request):</strong> after a camera restart, check the saved calibration against the live feed first (about 15 s), and recalibrate only if it fails.
+<ul>
+<li><strong>Checks:</strong> green marker vs its expected position at φ = 0 (≤ 3 px), rod length in pixels (≤ 1%), resting θ (≤ 0.3°), and arm angle at 0 and ±20° (≤ 0.5°). Exit code 0/1; logged to <code>runs/</code>.</li>
+<li><strong>Dry run:</strong> it flags exactly the fake rig's deliberate faults (roll 1.5°, trim −18 µs, gain +3%) and passes the rest.</li>
+<li><code>_rig.open_rig --fake</code> now uses <code>rig.yaml</code>'s nominal servo map, not the real rig's calibration file.</li>
+</ul>
+</li>
+<li><strong>First real use of the check (after the camera cooled down):</strong>
+<ul>
+<li>It FAILED narrowly: green offset 3.03 px, arm −20° off by 1.55°. Recalibrated (<code>runs/20260928-184501_calibration</code>): axis (670.7, 125.1), roll −0.85°, trim −72.4 µs, 0.0826 °/µs, circle RMS 0.08 px, rod/arm 2.86; board home 1428 µs.</li>
+<li>This was nearly identical to the previous calibration, yet <strong>the check failed again straight afterwards</strong>, so the check itself was wrong. Two faults:
+<ol>
+<li><strong>Roll sign error</strong> in the expected green position; φ = 0 is (sin roll, cos roll) in the image. It produced an offset of 2 × r × sin(roll) ≈ 3.7 px.</li>
+<li><strong>SG90 direction-dependent dead band under load.</strong> Reached from the opposite side to the calibration sweep, −20° read 1.55–1.83° off, while the same-side +20° read 0.2°. The probes now approach from below, like the sweep.</li>
+</ol>
+</li>
+<li>Arm-angle repeatability at the same command is 0.12–0.87° between runs, consistent with a ≈ 10 µs dead band × 0.083 °/µs. The arm limit was therefore set to 1.0°; it exists to catch a slipped horn tooth (≈ 15°).</li>
+<li><strong>After the fixes: PASS.</strong> Green 1.9 px, rod 0.12%, rest θ 0.07°, arm 0.87 / 0.82 / 0.27°.</li>
+<li><strong>Model note:</strong> the servo model has no dead band or backlash. Up to ≈ 1–1.8° of direction-dependent error in φ is unmodelled, and is a likely contributor to σ_φ ≈ 0.9° in E3.</li>
+</ul>
+</li>
+</ul>
+<h3 id="control-campaign-attempt-2-camera-stutter-and-a-servo-that-will-not-let-the-pendulum-rest">Control campaign attempt 2: camera stutter, and a servo that will not let the pendulum rest</h3>
+<ul>
+<li><strong>Campaign</strong> (<code>--repeats 3</code>, rest waits, MSMF backend), preceded by the calibration check (PASS after the fixes above) and E1c (30 toggles, <code>runs/20260928-184734_e1c_latency</code>: median 150.7 ms, capture ≈ 134 ms).</li>
+<li><strong>Trial 1, 25° (<code>runs/20260928-184811_e5_energy_identified_25deg</code>):</strong> the controller <strong>held the swing at 25.1–26.0°</strong> (peaks from 7 s on) until 16.3 s. Then a safety stop: &quot;estimator rejected 5 frames in a row&quot;.
+<ul>
+<li><strong>Cause: camera stutter under MSMF.</strong> In the last frames, identical images arrived twice with different arrival times (18.9°/18.9°, 5.1°/5.1°), and some gaps were 57–68 ms.</li>
+<li>At the bottom of the swing (≈ 170°/s), a 30 ms timestamp error is a 5° innovation, so the gate did its job on bad data.</li>
+</ul>
+</li>
+<li><strong>Trial 2, 35° (<code>184859</code>):</strong> its decay was recorded for 155 s and <strong>never came to rest</strong>. The swing envelope went 34 → 27 → 21 → 17 → 15 → 13°, then <strong>stayed at ≈ 13° for over a minute</strong>, while the 25° decay took 20 s.
+<ul>
+<li><strong>Owner's diagnosis, confirmed: a holding SG90 pumps the swing.</strong> The rod's reaction moves the arm within the servo's dead band, the servo corrects late, and energy goes in: a limit cycle.</li>
+<li>The run then crashed when both markers were hidden for 2 s (owner's hand stopping the swing): <code>wait_for_rest</code> treated that as a camera stall.</li>
+</ul>
+</li>
+<li><strong>Fixes:</strong>
+<ul>
+<li><strong>Firmware <code>D</code> (release):</strong> stops the servo pulses, so the servo goes limp; the next <code>S</code> or <code>H</code> re-engages it with the first pulse at the target. Also <code>SerialLink.release_servo</code>, <code>ServoActuator.release</code>, <code>HardwareRig.release</code>, and FakeBoard support.
+<ul>
+<li>Flashed: 5996 B / 335 B. Verified on the rig: release, then re-engage at 1428 µs; the EEPROM home survived the upload.</li>
+</ul>
+</li>
+<li><strong><code>e5_control.settle()</code>:</strong> release, wait for rest, re-engage at φ = 0, confirm rest. It runs before and after every trial. <code>check_calibration.py</code> settles the same way.</li>
+<li><code>wait_for_rest</code> stalls only when <strong>no frame at all</strong> arrives for 2 s; a hidden marker is not a stall. <code>e5_control</code> stops the campaign cleanly on a stall and keeps what it has.</li>
+<li><strong>Duplicate frames dropped</strong> in <code>marker_processor</code>: centroids bit-identical to the previous frame.</li>
+<li><strong>Back to DirectShow</strong> (<code>capture_latency</code> 0.147 s). It has 10 ms more latency, but 6 gaps over 50 ms per 3155 frames against 41 for MSMF, and no duplicates seen.</li>
+</ul>
+</li>
+</ul>
+<h2 id="2026-09-28-mon-evening-control-campaign-1-9-trials-and-servo-command-monitoring">2026-09-28 (Mon, evening): control campaign 1 (9 trials) and servo command monitoring</h2>
+<ul>
+<li>
+<p><strong>Setup:</strong></p>
+<ul>
+<li>servo released while settling;</li>
+<li>DirectShow backend;</li>
+<li>params from <code>runs/20260928-174336_e3_identify</code>;</li>
+<li>15/25/35° × 3 in a shuffled order (seed 0);</li>
+<li>30 s per trial;</li>
+<li>runs <code>runs/20260928-190002</code> … <code>190947</code>.</li>
+</ul>
+</li>
+<li>
+<p><strong>Calibration check before the campaign:</strong> FAIL on one item only, the arm at +20° (1.25° against a 1° limit); the camera items were clean (green 1.07 px, rod 0.02%, rest 0.12°).</p>
+<ul>
+<li><strong>The campaign still started:</strong> the command chain piped the check through <code>grep | tail</code>, which discards the check's exit status. <strong>Future chains must use <code>set -o pipefail</code></strong> or run without pipes.</li>
+<li>The failing item is the servo dead band, not a camera move. The control law uses the measured φ, so the results are not affected.</li>
+</ul>
+</li>
+<li>
+<p><strong>Every decay after release reached rest:</strong> 28–51 s, pre-trial waits 4–6 s. The release fix works.</p>
+</li>
+<li>
+<p><strong>Results</strong> (R-C1: ±2° of target, settled within 20 s):</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Target</th>
+<th>R-C1</th>
+<th>RMS error, last 10 s</th>
+<th>Settle time</th>
+<th>Overshoot</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>15°</td>
+<td><strong>3/3</strong></td>
+<td>0.34 / 0.46 / 0.57°</td>
+<td>8.1–8.9 s</td>
+<td>≈ 1°</td>
+</tr>
+<tr>
+<td>25°</td>
+<td><strong>2/3</strong></td>
+<td>0.83–0.86°</td>
+<td>5.1 / 13.4 s; one run stopped at 14.8 s</td>
+<td>0.7–0.9°</td>
+</tr>
+<tr>
+<td>35°</td>
+<td><strong>0/3</strong></td>
+<td>1.2–1.4° once in band</td>
+<td>27.7 / 28.9 s (too slow); one run stopped at 16.1 s</td>
+<td>1.9–2.8°</td>
+</tr>
+</tbody>
+</table></div>
+<ul>
+<li><strong>Overall 5/9, below the 80% R-C1 requires.</strong></li>
+</ul>
+</li>
+<li>
+<p><strong>The two stops:</strong> &quot;estimator rejected 5 frames in a row&quot;, both at high speed. The frame timestamps (arrival-based) jitter by about 10 ms, with occasional 60–70 ms gaps. At 170–240°/s that is 3–5° of apparent error, so the fixed 5° gate floor rejected good frames.</p>
+</li>
+<li>
+<p><strong>Servo command chatter (owner's concern, confirmed):</strong></p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Target</th>
+<th>Direction reversals</th>
+<th>Steps</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>15°</td>
+<td>≈ 2.2/s (smooth: two per swing)</td>
+<td>2.6–3.2°</td>
+</tr>
+<tr>
+<td>25°</td>
+<td>8–9/s</td>
+<td>up to 4.0°</td>
+</tr>
+<tr>
+<td>35°</td>
+<td>14/s</td>
+<td><strong>pinned at the 4.0° (200°/s) slew limit</strong></td>
+</tr>
+</tbody>
+</table></div>
+<p>The energy law scales its command with ω, so timing noise in ω became command noise.</p>
+</li>
+<li>
+<p><strong>Fixes (replayed offline on all 9 trials, θ only):</strong></p>
+<ol>
+<li>
+<p><strong>Timing-aware measurement noise:</strong> <code>EKFNoise.sigma_t</code>; the variance grows by (rate × sigma_t)². On the rig, <code>rig.yaml</code> <code>ekf: {sigma_t: 0.010, r_phi: 0.015}</code>: an arm-angle std of ≈ 0.9° for the SG90 dead band.</p>
+<ul>
+<li>Gate rejections: old up to 12 per trial (streaks up to 6); <strong>new 0 in all 9 trials</strong>.</li>
+<li>Replayed controller reversals: 15° 5 → 0.7/s; 25° 9–11 → 2.7–3.6/s; <strong>35° 14–16 → 7.5–8.7/s, still chattery</strong>.</li>
+</ul>
+</li>
+<li>
+<p><strong>The safety-stop streak counts pendulum-angle rejections only.</strong> A rejected arm-angle reading is just skipped.</p>
+</li>
+<li>
+<p><strong>The measured φ is now logged</strong> in <code>measurements</code>, so future stops can be replayed completely.</p>
+</li>
+<li>
+<p><strong>Servo command log (owner's request):</strong> <code>pal.hw.servo.log_servo</code>, used in E5, E3 and <code>check_calibration</code>. It writes:</p>
+<ul>
+<li><code>servo.csv</code>: t, requested and applied angle, µs;</li>
+<li><code>servo_release.csv</code>;</li>
+<li><code>servo_ack.csv</code>: the board-applied µs and board time;</li>
+<li><code>servo_summary</code> events: max step, max rate, reversals per second, clipped count, for the whole run and for the control window.</li>
+</ul>
+<p>E5 also prints the control-window summary per trial.</p>
+</li>
+</ol>
+<ul>
+<li>Tests added for the timing-aware gate, the streak rule and <code>command_summary</code>. All tests pass.</li>
+</ul>
+</li>
+<li>
+<p><strong>Open:</strong></p>
+<ul>
+<li>35° is still slow (≈ 28 s) and chattery. Candidates: a command low-pass filter, a higher <code>phi_max</code>, or identifying at a larger amplitude (E3 reached 26°, so the damping at 35° is extrapolated).</li>
+<li>Re-run the campaign with the fixes. Measured θ was used for scoring; the arm-angle check limit is 1° against a repeatability of ≈ 1.25°.</li>
+</ul>
+</li>
+<li>
+<p><strong>Improvements (owner-approved) while the camera rests:</strong></p>
+<ul>
+<li><code>check_calibration.py</code> arm limit <strong>1.5°</strong> (owner decision); the measured SG90 repeatability is ≈ 1.25°.</li>
+<li><strong>Command low-pass</strong> <code>LoopConfig.cmd_lowpass_hz</code>: first order, with its group delay 1/(2π fc) added to the lookahead. <code>rig.yaml</code> <code>control: {cmd_lowpass_hz: 3.0}</code>; <code>e5_control.py --cmd-lowpass</code> overrides it.
+<ul>
+<li>
+<p><strong>Sizing</strong> on the 9 recorded trials (replayed EKF + controller, θ only):</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Cutoff</th>
+<th>35° reversals</th>
+<th>Max step</th>
+<th>25° reversals</th>
+<th>15° reversals</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>off</td>
+<td>7.9/s</td>
+<td>6.1°</td>
+<td>3.2/s</td>
+<td>0.7/s</td>
+</tr>
+<tr>
+<td>5 Hz</td>
+<td>3.5/s</td>
+<td>—</td>
+<td>—</td>
+<td>—</td>
+</tr>
+<tr>
+<td><strong>3 Hz (chosen)</strong></td>
+<td><strong>2.8/s</strong></td>
+<td><strong>1.9°</strong></td>
+<td>2.1/s</td>
+<td>0.3/s</td>
+</tr>
+<tr>
+<td>2 Hz</td>
+<td>2.4/s</td>
+<td>—</td>
+<td>—</td>
+<td>—</td>
+</tr>
+</tbody>
+</table></div>
+<p>Two reversals per swing is ≈ 2.1/s.</p>
+</li>
+<li>
+<p><strong>Closed loop in simulation</strong>, 4 seeds × 15/25/35°: R-C1 100% with and without the filter; settle times unchanged (8.3/5.6/4.2 s against 9.2/5.6/4.2 s); RMS 0.15/0.10/0.19° → 0.21/0.14/0.22°.</p>
+</li>
+</ul>
+</li>
+<li><strong>Sim-to-real gap at 35°:</strong> 4.2 s to settle in simulation against ≈ 28 s on the rig. The rig loses far more energy at large swings than the identified model (E3 up to 26°: β = μ = 0, η = 0.031) or <code>sim.yaml</code> assume.</li>
+<li><strong>E3 upgraded for the larger-swing identification:</strong>
+<ul>
+<li>it settles with the servo released before the run;</li>
+<li><code>--also RUN_DIR...</code> fits earlier runs jointly, via the new <code>pal.identification.record.record_from_run</code>. Refitting the reloaded <code>174336</code> record reproduces its saved values exactly.</li>
+<li><strong>Planned run:</strong> <code>--amp-deg 5 --f-lo 0.7 --f-hi 1.5 --duration 25 --also runs/20260928-174336_e3_identify</code>. The sweep is about 2.3× slower through resonance, so swings of ≈ 35–45° are expected (60° abort).</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<h2 id="2026-09-28-mon-night-larger-swing-identification-and-control-campaign-2">2026-09-28 (Mon, night): larger-swing identification and control campaign 2</h2>
+<ul>
+<li>
+<p><strong>Before:</strong> calibration check PASS (green 1.01 px, rod 0.11%, rest 0.11°, arm 0.45 / 1.45 / 0.23°; +20° is consistently the largest). E1c: 30 toggles, median 162.4 ms, capture ≈ 146 ms (DirectShow; config 0.147 kept).</p>
+</li>
+<li>
+<p><strong>E3, larger swings:</strong> <code>runs/20260928-194003_e3_identify</code>. Chirp ±5°, 0.75–1.6 Hz, 25 s, <strong>fitted jointly</strong> with <code>174336</code> (≤ 26°).</p>
+<ul>
+<li>Max |θ| 35.9°, max |φ| <strong>7.9° for a ±5° command</strong>; 750 frames, 100% with both markers.</li>
+</ul>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Quantity</th>
+<th>Joint fit</th>
+<th><code>174336</code> alone (≤ 26°)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>κ</td>
+<td><strong>4.6098 ± 0.0022</strong>; period 0.934 s (light gate 0.933)</td>
+<td>4.676</td>
+</tr>
+<tr>
+<td>η</td>
+<td><strong>0.0335 ± 0.0057</strong></td>
+<td>0.031 ± 0.014</td>
+</tr>
+<tr>
+<td>β, μ</td>
+<td>0</td>
+<td>0</td>
+</tr>
+<tr>
+<td>ω_n</td>
+<td>45.8 ± 7.0</td>
+<td>—</td>
+</tr>
+<tr>
+<td>dead time</td>
+<td>0 ± 5 ms</td>
+<td>—</td>
+</tr>
+<tr>
+<td>σ_θ</td>
+<td>0.58°</td>
+<td>—</td>
+</tr>
+<tr>
+<td><strong>σ_φ</strong></td>
+<td><strong>1.53°</strong></td>
+<td>0.93°</td>
+</tr>
+</tbody>
+</table></div>
+<ul>
+<li><strong>The damping at large swings is not higher than the small-swing fit.</strong> So the slow 35° in campaign 1 is not the pendulum's damping. The arm moving 7.9° for a 5° command (pulled by the pendulum through the servo's compliance and dead band) points to <strong>actuator mismatch</strong>: arm compliance is not modelled.</li>
+</ul>
+</li>
+<li>
+<p><strong>Campaign 2:</strong> <code>runs/20260928-1941..-1951*_e5_*</code>, console in <code>runs/campaign2_console.txt</code>, order seed 1. New params, 3 Hz command low-pass, timing-aware EKF, servo log.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Target</th>
+<th>R-C1</th>
+<th>RMS</th>
+<th>Settle</th>
+<th>Servo commands (control window)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>15°</td>
+<td><strong>1/3</strong></td>
+<td>0.26 / 3.80 / 3.95°</td>
+<td>11.6 s / never / never</td>
+<td>≤ 1.2° steps, 0.2–0.3 reversals/s</td>
+</tr>
+<tr>
+<td>25°</td>
+<td><strong>3/3</strong> (campaign 1: 2/3)</td>
+<td>0.50–0.61°</td>
+<td>5.6–6.8 s</td>
+<td>≤ 1.0° steps, 2.4–2.5 reversals/s, ≤ 42°/s</td>
+</tr>
+<tr>
+<td>35°</td>
+<td><strong>3/3</strong> (campaign 1: 0/3)</td>
+<td>1.00–1.13°</td>
+<td><strong>5.1–5.9 s</strong> (was ≈ 28 s)</td>
+<td>≤ 1.9° steps, 5.4–5.5 reversals/s, ≤ 101°/s</td>
+</tr>
+</tbody>
+</table></div>
+<ul>
+<li><strong>Overall 7/9, with no safety stops</strong> (campaign 1: 5/9, 2 stops). No command reached the 200°/s slew limit.</li>
+<li><strong>The 15° failures:</strong> the amplitude crept from 5–6° to only 11.6–11.9° in 30 s.
+<ul>
+<li>Near a small target the energy error is small, so the commands were ≈ ±1.1°: inside the SG90 dead band (≈ 0.8°) and compliance. The camera sees ≈ 6° peak-to-peak arm motion anyway, mostly pendulum-driven.</li>
+<li>The integral term acts only within 3° of the target, so it never engaged.</li>
+<li>The one 15° success started from a larger swing after start-up (8° at 5 s).</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>
+<p><strong>15° fix: rig integral gains</strong> (<code>rig.yaml</code> <code>control: {integral_band_deg: 6, k_integral: 1.0}</code>; code defaults 3° and 0.5 kept for simulation).</p>
+<ul>
+<li>
+<p><strong>Chosen in a dead-band simulation</strong> (scratch harness: the servo target moves only when the command differs by &gt; 0.8°, 3 seeds per case):</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Variant</th>
+<th>15° settle</th>
+<th>15° overshoot</th>
+<th>25° / 35°</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>baseline</td>
+<td>12–13 s</td>
+<td>0.7°</td>
+<td>—</td>
+</tr>
+<tr>
+<td>band 6°, ki 0.5</td>
+<td>10–12 s</td>
+<td>1.4°</td>
+<td>unchanged</td>
+</tr>
+<tr>
+<td><strong>band 6°, ki 1.0 (chosen)</strong></td>
+<td><strong>9–11 s</strong></td>
+<td><strong>1.9°</strong></td>
+<td>unchanged</td>
+</tr>
+<tr>
+<td>band 6°, ki 1.5</td>
+<td>13–14 s</td>
+<td>2.3°</td>
+<td>—</td>
+</tr>
+<tr>
+<td>integrate everywhere</td>
+<td>—</td>
+<td>3–4°</td>
+<td>3–4°</td>
+</tr>
+</tbody>
+</table></div>
+<p>The simulation does not reproduce the rig's stall itself (all variants reach 15°): the unmodelled arm compliance drains more energy on the rig.</p>
+</li>
+</ul>
+</li>
+<li>
+<p><strong>The Sony dropped out twice more:</strong> once after ≈ 25 min of streaming, and again minutes after a restart, before it had cooled.</p>
+<ul>
+<li>After the restart: the check FAILED (green 4.3 px, arm 1.75°). Recalibrated: <code>runs/20260928-213944_calibration</code>.
+<ul>
+<li>axis (673.8, 132.5), 1467 px/m (zoom changed ≈ 6% again), roll −1.00°;</li>
+<li>trim <strong>−87.3 µs</strong> (was −72.4), gain 0.0806 °/µs, circle RMS 0.12 px;</li>
+<li>rod/arm 3.04 against a metric 2.93 (within 8%); board home 1413 µs.</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>
+<p><strong>15° re-run (3 trials,</strong> <code>runs/campaign2b_15deg_console.txt</code><strong>): R-C1 3/3.</strong></p>
+<ul>
+<li>Settle 12.2 / 11.8 / 7.6 s; RMS 0.44 / 0.49 / 0.31°; overshoot 2.2 / 2.1 / 1.9°.</li>
+<li>Servo: steps ≤ 1.0°, ≤ 47°/s, 0.3 reversals/s.</li>
+</ul>
+</li>
+<li>
+<p><strong>Combined status: R-C1 is met on 9/9 trials</strong> (15° × 3 with the new gains; 25° × 3 and 35° × 3 from campaign 2).</p>
+<ul>
+<li><strong>Caveat:</strong> the 25°/35° trials ran with the old integral gains and a different calibration session. A clean single-configuration campaign is still needed before this counts as R-C1 evidence.</li>
+<li>The Sony's ≈ 20–25 min streaming limit means splitting it (for example 15/25° in one session, 35° in the next).</li>
+</ul>
+</li>
+</ul>
+<h2 id="2026-09-28-mon-late-clean-r-c1-campaign-session-1-final-settings">2026-09-28 (Mon, late): clean R-C1 campaign, session 1 (final settings)</h2>
+<ul>
+<li>
+<p><strong>Settings, frozen for the clean campaign:</strong></p>
+<ul>
+<li>params <code>runs/20260928-194003_e3_identify</code> (joint fit);</li>
+<li>EKF <code>sigma_t</code> 0.010, <code>r_phi</code> 0.015;</li>
+<li>command low-pass 3 Hz;</li>
+<li>integral band 6°, k_integral 1.0;</li>
+<li>slew limit 200°/s;</li>
+<li>servo released while settling;</li>
+<li>DirectShow, capture latency 0.147 s.</li>
+</ul>
+</li>
+<li>
+<p><strong>Calibration check:</strong> &quot;pendulum not at rest after 104 s&quot; (it was still swinging), so the chain recalibrated as a fallback (<code>runs/s1_cal.txt</code>): roll −0.89°, trim −75.9 µs (board home 1424), circle RMS 0.18 px, rod/arm 3.04.</p>
+</li>
+<li>
+<p><strong>Session 1: 15° and 25° × 3, order seed 2</strong> (console <code>runs/s1_campaign.txt</code>). <strong>6/6 R-C1:</strong></p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Target</th>
+<th>R-C1</th>
+<th>Settle</th>
+<th>RMS</th>
+<th>Overshoot</th>
+<th>Servo (control window)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>15°</td>
+<td><strong>3/3</strong></td>
+<td>7.4 / 7.9 / 7.2 s</td>
+<td>0.31 / 0.45 / 0.35°</td>
+<td>1.7–2.0°</td>
+<td>steps ≤ 1.3°, ≤ 49°/s, 0.3–0.4 reversals/s</td>
+</tr>
+<tr>
+<td>25°</td>
+<td><strong>3/3</strong></td>
+<td>5.4 / 5.5 / 5.4 s</td>
+<td>0.56 / 0.57 / 0.49°</td>
+<td>1.1–1.4°</td>
+<td>steps ≤ 1.2°, ≤ 49°/s, 3.3–3.4 reversals/s</td>
+</tr>
+</tbody>
+</table></div>
+<ul>
+<li>No aborts, no resets, nothing clipped.</li>
+<li>Rest waits: 73 s before the first trial, then 5 s; decays 26–41 s.</li>
+</ul>
+</li>
+<li>
+<p><strong>Session 2 (35° × 3) is pending,</strong> after the camera has cooled.</p>
+</li>
+<li>
+<p><strong>Session 2: 35° × 3, order seed 3</strong> (console <code>runs/s2_campaign.txt</code>), right after session 1 with no recalibration. <strong>3/3 R-C1:</strong></p>
+<ul>
+<li>settle 4.5 / 4.8 / 4.2 s; RMS 1.14 / 0.82 / 1.02°; overshoot 0.9–1.4°;</li>
+<li>servo: steps ≤ 2.1°, ≤ 117°/s, 5.1–5.3 reversals/s, nothing clipped; decays 38–50 s.</li>
+</ul>
+</li>
+<li>
+<p><strong>Clean campaign result: R-C1 on 9/9 hardware trials (15/25/35° × 3) with one frozen configuration.</strong> The requirement is ≥ 80%, and the point estimate is 100%.</p>
+<ul>
+<li><strong>Statistical caveat:</strong> the 95% Clopper–Pearson interval for 9/9 is [0.66, 1.00]. It only excludes a true rate below 66%.</li>
+<li>Showing ≥ 80% at 95% confidence needs about 15 consecutive passes (15/15 gives a lower bound of 0.78; 20/20 gives 0.83).</li>
+<li>Worth adding trials in later sessions, which also covers repeatability across camera restarts and recalibrations.</li>
+</ul>
+</li>
+</ul>
+<h2 id="2026-09-28-mon-late-everything-prepared-to-finish-the-hardware-experiments">2026-09-28 (Mon, late): everything prepared to finish the hardware experiments</h2>
+<p>While the camera cooled (the owner asked to have everything ready and all results recorded):</p>
+<ul>
+<li><strong><code>analysis/hw_results.py</code>:</strong> builds <code>docs/results/e5_hardware.md</code>, <code>e5_hardware_trials.csv</code> and <code>docs/figures/e5_hw_amplitude.png</code> from all hardware E5 runs. <code>runs/</code> is not committed, so these files are the permanent record.
+<ul>
+<li>Trials are grouped by an exact configuration fingerprint: params, rig <code>control</code>/<code>ekf</code>, loop options.</li>
+<li>Per configuration: R-C1 with exact Clopper–Pearson intervals (new <code>pal.stats.clopper_pearson</code>, tested), a trial table, servo command statistics, the safety stops, and H2 pairs when <code>energy_naive</code> trials exist.</li>
+<li><strong>First output:</strong> 36 trials in 4 configurations. The final configuration C4 is <strong>12/12 R-C1 (95% CI 74–100%)</strong>. The earlier configurations are kept, with their failures.</li>
+<li>Palette validated for colour-vision deficiency (blue/orange; ΔE 24.7 protan).</li>
+</ul>
+</li>
+<li><strong>Hands-free E1b:</strong> <code>e1b_period.py --pump &lt;params&gt;</code> swings the pendulum up with the energy controller, releases the servo, and records the free decay. The dry run passes.</li>
+<li><strong><code>experiments/check_gate.py</code>:</strong> re-measures the light-gate thresholds in place. It swings up, releases, polls A0 at ≈ 250 Hz, sets thresholds from the shallowest dip, checks the dip count against the camera's passages, and has <code>--write</code>. On the morning's recording it gives 755/810 (hand-set: 720/790) and detects all 30 passes.</li>
+<li><strong><code>experiments/e3_campaign.py</code> (H1 on hardware)</strong> and <strong><code>analysis/e3_hw.py</code>:</strong> see <code>test_plan.md</code> E3.
+<ul>
+<li><code>RealTimeSession</code> pads the command record over laptop pauses.</li>
+<li><strong>Pause frames are excluded from the fit.</strong> Without that, D-optimal's longer thinking pauses (≈ 5 s against ≈ 1 s for the chirp in the dry run) would have given it free data and biased H1.</li>
+</ul>
+</li>
+<li><strong><code>e5_control.pump()</code></strong> is shared by E1b, <code>check_gate</code> and the free-decay held-out record.</li>
+<li>README status updated to the hardware results; the test plan is v0.3 (session routine, H2 design, E3 implementation, remaining-session plan).</li>
+<li>All tests pass (89 before today's additions, plus new ones); lint clean. Every new script was dry-run on the fake rig.</li>
+</ul>
+<h2 id="2026-09-29-tue-just-after-midnight-hardware-session-a">2026-09-29 (Tue, just after midnight): hardware session A</h2>
+<p>Logs are in <code>runs/sA_*.txt</code>.</p>
+<ol>
+<li>
+<p><strong>Calibration check: FAIL</strong> (arm at −20° read 2.47° off; the camera items were fine: green 1.93 px, rod 0.08%, rest 0.18°), so the chain recalibrated: <code>runs/20260929-000404_calibration</code>.</p>
+<ul>
+<li>rod/arm 2.96 against a metric 2.93;</li>
+<li>roll −0.97°;</li>
+<li>trim −80.2 µs (board home 1420 µs);</li>
+<li>0.0818 °/µs, 1506 px/m, circle RMS 0.23 px, rest θ std 0.06°.</li>
+</ul>
+</li>
+<li>
+<p><strong>E1c</strong> (30 toggles): median 160.6 ms, capture ≈ 144 ms. That is within 5 ms of the configured 0.147 s, so it was kept. R-S6 2.46 ms (FAIL, marginal as before).</p>
+</li>
+<li>
+<p><strong>E3 held-out set</strong>, 100% valid frames, never to be fitted:</p>
+<ul>
+<li>multisine: <code>runs/20260929-000435_e3_validation_multisine</code>, max |θ| 43.4°;</li>
+<li>free decay from 25°: <code>…000525…free_decay</code>, 25.7°;</li>
+<li>burst: <code>…000633…burst</code>, 22.8°.</li>
+</ul>
+</li>
+<li>
+<p><strong>Light-gate re-check</strong> (<code>check_gate.py --write</code>):</p>
+<ul>
+<li>The clear level is now <strong>808</strong> (851 on 2026-09-28: the lighting changed, as the owner expected).</li>
+<li>32 dips against 33 camera passages. The fastest pass dips only to 652, the slowest to 600.</li>
+<li><strong>Thresholds 720/790 → 753/785</strong>, written to <code>rig.yaml</code>. With the old ones the board still saw 32 blocked edges, but the new ones keep the margin under the new clear level.</li>
+</ul>
+</li>
+<li>
+<p><strong>E1b, period, hands-free</strong> (<code>runs/20260929-000755_e1b_period</code>), 3 free decays from 30° with the servo released:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Repeat</th>
+<th>Gate period</th>
+<th>Camera period</th>
+<th>Difference</th>
+<th>n</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>948.75 ms</td>
+<td>948.44 ms</td>
+<td>−0.093%</td>
+<td>24</td>
+</tr>
+<tr>
+<td>2</td>
+<td>949.68 ms</td>
+<td>948.92 ms</td>
+<td>−0.067%</td>
+<td>24</td>
+</tr>
+<tr>
+<td>3</td>
+<td>950.52 ms</td>
+<td>949.58 ms</td>
+<td>−0.091%</td>
+<td>25</td>
+</tr>
+</tbody>
+</table></div>
+<ul>
+<li><strong>R-S4 PASS:</strong> worst |difference| 0.093%, against a limit of 0.2%.</li>
+<li>Board clock rate 1.000093–1.000096, mapped out by the ping fit.</li>
+<li>The released-servo period (≈ 0.949 s) is longer than with the servo holding (0.933 s), because the limp arm swings along with the rod. The comparison measures the same motion with both sensors, so this does not affect R-S4.</li>
+<li>The camera reads consistently ≈ 0.08% shorter than the gate. That is small and within the limit; it could come from the gate's amplitude-dependent threshold-crossing time drifting through a decay.</li>
+</ul>
+</li>
+</ol>
+<h2 id="2026-09-29-tue-session-b-h1-on-hardware-first-4-blocks-interim">2026-09-29 (Tue): session B, H1 on hardware, first 4 blocks (interim)</h2>
+<ul>
+<li><code>e3_campaign.py</code> now stops the campaign cleanly if a segment gets &lt; 50% of the expected valid frames (camera stall); <code>e3_hw.py</code> skips such units. None stalled here.</li>
+<li><strong>Run:</strong> 4 blocks (order seed 20), 8 units, all 30 s completed; log in <code>runs/sB_e3_campaign.txt</code>. Held-out set: session A's three records.
+<ul>
+<li>D-optimal pauses were 1.5–6.6 s per segment (design ≈ 1.4 s plus fit), against ≈ 0.5–1.5 s for the chirp. Pause frames were excluded from the fits, as designed.</li>
+<li>D-optimal chose resonant sines (6° at 1.06–1.19 Hz), a 2.1 Hz sine for the servo, two-tones and bursts. Its first segment is designed from the prior and is always a 6° resonant sine.</li>
+</ul>
+</li>
+<li><strong>Result</strong> (<code>analysis/e3_hw.py</code> → <code>docs/results/e3_hardware.md</code>, <code>docs/figures/e3_hw_nrmse.png</code>):
+<ul>
+<li>
+<p><strong>Noise floor</strong> (held-out 3 s NRMSE of one fit to all 8 units pooled) = <strong>0.0434</strong> (κ 4.597, η 0.023).</p>
+</li>
+<li>
+<p><strong>Time to within 10% of the floor:</strong></p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th></th>
+<th>Blocks 0, 2, 3</th>
+<th>Block 1</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>D-optimal</td>
+<td>10 s</td>
+<td>not within 30 s</td>
+</tr>
+<tr>
+<td>chirp</td>
+<td>15 s</td>
+<td>not within 30 s</td>
+</tr>
+</tbody>
+</table></div>
+</li>
+<li>
+<p>Median ratio 0.67 over 3 complete pairs. <strong>H1 (≤ 0.5) is not supported at this interim point</strong>; paired Wilcoxon p = 0.25, the smallest p possible with n = 3.</p>
+</li>
+<li>
+<p>D-optimal was faster in every complete block, but not by the pre-registered factor of two.</p>
+</li>
+</ul>
+</li>
+<li><strong>Caveats, reported as found:</strong>
+<ol>
+<li><strong>The time resolution is the 5 s segment,</strong> so ratios can only be 0.5, 0.67, 1, …</li>
+<li><strong>&quot;First reach&quot; is fragile.</strong> After the first reach, both protocols settle at ≈ 1.2× the floor, not within 10%: a 30 s unit plateaus above the 240 s pooled fit. D-optimal reached 1.04× at 10 s and then drifted back to ≈ 1.2×.</li>
+<li><strong>One D-optimal unit (block 3) jumped to 5.7× the floor at its last segment</strong> (NRMSE 0.248). This looks like a fit into a poor local optimum, not bad data: the previous segment was 0.044. It does not change &quot;first reach&quot; but belongs in the record.</li>
+<li>At 5 s, the chirp is already at 1.4× the floor and D-optimal at 2.3×. D-optimal's first segment (a strong resonant sine chosen from the prior) predicts the held-out set worse than the chirp's gentle low-frequency start.</li>
+</ol>
+</li>
+<li><strong>Planned:</strong> 4 more blocks (session C, seed 21) to complete the 8, then the final H1 verdict. <strong>No criterion is changed:</strong> v1.1 stays as pre-registered.</li>
+</ul>
+<h2 id="2026-09-29-tue-timeline-compressed-offline-h3-guided-e1a">2026-09-29 (Tue): timeline compressed; offline H3; guided E1a</h2>
+<ul>
+<li>
+<p><strong>Owner decision: finish everything by 2026-09-29 night / 2026-09-30.</strong> Remaining rig work: E1a (R-S3, for the go/no-go verdict), H1 session C (the last 4 blocks), H2 (2 sessions). <strong>Dropped, and to be reported as future work:</strong> E6 perturbations, E7 sim-to-real, the extra ablations.</p>
+</li>
+<li>
+<p><strong>E1a guided mode</strong> (<code>e1a_static_angle.py --guided</code>): no keyboard needed.</p>
+<ul>
+<li>Angle order 0, +15, +30, +45, −15, −30, −45 (+ = right, as seen from the camera). For each angle the script waits until the rod is held still within ±6° of the line, then records with the <strong>red LED on</strong> and switches it off when done.</li>
+<li>Dry run OK; it fails only because of the fake rig's deliberate 1.5° roll.</li>
+</ul>
+</li>
+<li>
+<p><strong>H3 on hardware</strong> (<code>analysis/h3_hw.py</code> → <code>docs/results/h3_hardware.md</code>): each of the 8 E3 units fitted with each damping law and scored on the held-out set. ΔNLL per sample = log(RMSE ratio).</p>
+<ul>
+<li><strong>Bug found and fixed before reporting:</strong> the unit pattern <code>*_b*</code> also matched the held-out record <code>e3_validation_burst</code>, so a held-out record was fitted as a training unit. Units are now selected by <code>_e3_chirp_b</code> / <code>_e3_dopt_b</code>, and the numbers below are from the corrected run.</li>
+</ul>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Damping law</th>
+<th>Median held-out NRMSE</th>
+<th>BIC (lowest = viscous)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>viscous</td>
+<td>0.0459</td>
+<td>1722.7</td>
+</tr>
+<tr>
+<td>+ Coulomb</td>
+<td>0.0481</td>
+<td>1730.2</td>
+</tr>
+<tr>
+<td>+ quadratic</td>
+<td>0.0489</td>
+<td>1730.2</td>
+</tr>
+<tr>
+<td>all three</td>
+<td>0.0494</td>
+<td>1737.6</td>
+</tr>
+</tbody>
+</table></div>
+<ul>
+<li><strong>μ fits to 0 in every unit:</strong> there is no measurable dry friction after the pivot rework.</li>
+<li>Coulomb vs quadratic: ΔNLL median +0.025, quadratic better in 4/8, <strong>paired Wilcoxon p = 0.74. H3 is not supported:</strong> the laws are not distinguishable on this rig at these amplitudes, and BIC prefers the simplest (viscous).</li>
+<li><strong>Pattern:</strong> chirp units (smaller swings) favour viscous, D-optimal units (≥ 35° resonant swings) favour quadratic, as expected if air drag appears only at large amplitude. A dedicated large-amplitude held-out set would be needed to separate them; this is future work.</li>
+</ul>
+</li>
+</ul>
+<h2 id="2026-09-29-tue-early-morning-session-c-e1a-and-the-last-h1-blocks">2026-09-29 (Tue, early morning): session C, E1a and the last H1 blocks</h2>
+<ul>
+<li>
+<p><strong>Calibration check</strong> after the camera restart: FAIL, green 3.10 px (limit 3). Recalibrated: <code>runs/sC_1b_cal.txt</code>.</p>
+<ul>
+<li><strong>rod/arm 2.924 against a metric 2.926</strong>, the closest yet;</li>
+<li>roll −0.98°, trim −85.5 µs (board home 1415 µs), circle RMS 0.07 px, rest θ std 0.15°.</li>
+</ul>
+</li>
+<li>
+<p><strong>E1a, static angle (R-S3)</strong>, guided, hand-held: <code>runs/20260929-005339_e1a_static_angle</code>.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Reference</th>
+<th>0°</th>
+<th>+15°</th>
+<th>+30°</th>
+<th>+45°</th>
+<th>−15°</th>
+<th>−30°</th>
+<th>−45°</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Camera</td>
+<td>+0.26°</td>
+<td>+17.63°</td>
+<td>+31.57°</td>
+<td>+44.71°</td>
+<td>−13.94°</td>
+<td>−29.10°</td>
+<td>−43.40°</td>
+</tr>
+</tbody>
+</table></div>
+<ul>
+<li>Frame sd 0.10–0.48° (hand tremor; the camera's own noise at rest is 0.02°).</li>
+<li><strong>RMS error 1.42°. R-S3 FAIL as measured</strong> (limit 1.0°). Mean offset +1.10°; 0.89° after removing it.</li>
+<li><strong>Owner's note on the reference:</strong> the ruler was held by hand, and the printed lines could not be aligned without entering the camera's view. The owner aligned from the side, so parallax limits the reference accuracy. The owner considers the ±45° readings the most accurate: errors −0.29° and +1.60°.</li>
+<li>The guided capture window (±6°, still for 1.5 s) can also trigger before the rod is on the line. The +15° point (+2.63°) is the likely case.</li>
+<li><strong>Owner decision: accept the result as it stands and continue.</strong> No re-grading. The failure is attributed to the reference procedure, which is untested and unproven.</li>
+<li><strong>Future work:</strong> tape the rod at each line, capture only within ±2°, or use an encoder reference (upgrade U1).</li>
+</ul>
+</li>
+<li>
+<p><strong>H1 session C, first attempt (order seed 21):</strong> stopped by the owner, who reported that <strong>the rod got stuck at the pivot.</strong></p>
+<ul>
+<li>The completed D-optimal unit <code>runs/20260929-005807_e3_dopt_b0</code> is <strong>marked invalid</strong> (an <code>invalid</code> event appended to its log, citing the owner's report). Its held-out NRMSE was 0.16 at 10 s (session B: 0.04–0.06) and its κ 4.50 (elsewhere 4.59–4.61), consistent with a sticking pivot.</li>
+<li>The interrupted chirp unit <code>…005942_e3_chirp_b0</code> never wrote its record, so it is excluded automatically.</li>
+<li><strong>Bookkeeping fix:</strong> session C's blocks were numbered 0–3 again, clashing with session B's, and the pairing would have mixed them. Blocks are now identified as order-seed–number in <code>e3_hw.py</code>, and <code>e3_campaign.py --block0</code> continues the numbering.</li>
+<li><strong>Restarted</strong> as blocks 4–7 (seed 21).</li>
+</ul>
+</li>
+<li>
+<p><strong>Report draft:</strong> <code>docs/report.md</code>, with every result so far. H1 final and H2 are pending.</p>
+</li>
+<li>
+<p><strong>H1 session C, restarted as blocks 4–7:</strong> all 8 units completed (<code>runs/sC_4_e3_campaign_restart.txt</code>).</p>
+</li>
+<li>
+<p><strong>Final H1</strong> (<code>docs/results/e3_hardware.md</code>): 16 valid units.</p>
+<ul>
+<li>Noise floor 0.0461 (pooled fit, κ 4.595).</li>
+<li>Time to within 10% of the floor: D-optimal median <strong>10 s</strong>, chirp <strong>15 s</strong>. Per-pair ratios 0.67, 0.67, 0.67, 0.50, 1.00, 0.67; 2 blocks incomplete (never within 10% in 30 s).</li>
+<li>Median ratio <strong>0.67</strong>; paired Wilcoxon p = 0.0625, the minimum with 5 decisive pairs. <strong>H1 (≤ 0.5) is not supported as pre-registered.</strong> D-optimal is consistently ≈ ⅓ faster.</li>
+</ul>
+</li>
+<li>
+<p><strong>Owner saw servo &quot;jerks&quot; during the H1 runs.</strong> The servo logs confirm them:</p>
+<ul>
+<li>Each D-optimal unit has 4–6 single-step jumps of 3–8.8°; each chirp unit has one 3.2° step at the end.</li>
+<li><strong>Cause:</strong> each open-loop segment starts at 0° while the servo is still holding the previous segment's last angle, often up to 6°, through the laptop pause. Open-loop commands also have no slew limit (only the closed loop has one).</li>
+<li>The steps are in the command record, so the fits model them. But they are unplanned excitation received only by D-optimal, a small bias in its favour. It did not change the verdict. Reported in <code>report.md</code> §5.2.</li>
+<li><strong>Fix, future work:</strong> fade each segment in from the held value and out to 0, and apply the 200°/s slew limit to open-loop commands.</li>
+</ul>
+</li>
+<li>
+<p><strong>H3 with 16 units:</strong> still not distinguishable (Coulomb vs quadratic ΔNLL median −0.029, quadratic better in 7/16, p = 0.43). μ = 0 everywhere. Viscous is best by both held-out error (0.0480) and BIC.</p>
+</li>
+</ul>
+<h2 id="2026-09-29-tue-h2-session-d">2026-09-29 (Tue): H2 session D</h2>
+<ul>
+<li>
+<p><strong>Calibration check</strong> FAIL (green 3.70 px). Recalibrated (<code>runs/sD_1b_cal.txt</code>): rod/arm 2.946, roll −0.91°, trim −83.9 µs (home 1416 µs), circle RMS 0.14 px.</p>
+</li>
+<li>
+<p><strong>E1c in this session: INVALID</strong> (<code>runs/20260929-013541_e1c_latency</code>).</p>
+<ul>
+<li>The automatic LED search picked the rod's tip region (628, 682), probably because the pendulum was still moving, instead of the red LED (≈ 407, 190).</li>
+<li>The watched region was dark (brightness 17–34) and flipped <strong>132 times for 30 toggles</strong>, so the reported &quot;27.9 ms&quot; is noise.</li>
+<li>It changed nothing: <code>capture_latency</code> stays 0.147 s.</li>
+<li><strong>Fix:</strong> <code>e1c_latency.py</code> now checks that the watched region flips once per toggle (±20%). Otherwise it prints INVALID and exits 1. Checked on past runs: 30/30 for the good runs, 132/30 for this one.</li>
+</ul>
+</li>
+<li>
+<p><strong>H2 session D</strong> (order seed 10; <code>runs/sD_3_h2.txt</code>): <strong>energy_identified 3/3 R-C1</strong> (15°: 7.5 s, 0.43°; 25°: 5.3 s, 0.67°; 35°: 4.1 s, 1.36°). <strong>energy_naive 0/3:</strong></p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Target</th>
+<th>energy_naive RMS</th>
+<th>What happened</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>15°</td>
+<td>10.1°</td>
+<td>stalled at ≈ 5°</td>
+</tr>
+<tr>
+<td>25°</td>
+<td>17.2°</td>
+<td>stalled at ≈ 7–8°</td>
+</tr>
+<tr>
+<td>35°</td>
+<td>16.5°</td>
+<td>crept to ≈ 20° by 30 s, <strong>chattering at the 200°/s slew limit</strong> (11 reversals/s, 4° steps)</td>
+</tr>
+</tbody>
+</table></div>
+<ul>
+<li>No safety stops.</li>
+<li>Paired RMS: median 0.56° against 16.47°, a <strong>reduction of 97%</strong> (H2 needs ≥ 30%). Paired Wilcoxon p = 0.25, the minimum possible with n = 3.</li>
+</ul>
+</li>
+<li>
+<p><strong>Final configuration C4 now:</strong> energy_identified <strong>15/15 R-C1 (95% CI 78–100%)</strong>.</p>
+</li>
+</ul>
+<h2 id="2026-09-29-tue-h2-session-e-hardware-experiments-complete">2026-09-29 (Tue): H2 session E; hardware experiments complete</h2>
+<ul>
+<li>
+<p><strong>H2 session E</strong> (order seed 11, no restart since session D's calibration; <code>runs/sE_h2.txt</code>):</p>
+<ul>
+<li>energy_identified 3/3 R-C1 (15°: 9.0 s, 0.35°; 25°: 5.5 s, 0.66°; 35°: 6.7 s, 1.16°);</li>
+<li>energy_naive 0/3 (RMS 9.9°, 17.5°, 12.0°; at 35° it again chattered at the 200°/s slew limit).</li>
+</ul>
+</li>
+<li>
+<p><strong>H2, final (6 pairs, configuration C4):</strong> median RMS 0.56° against 14.22°, a <strong>96% reduction</strong>. Paired Wilcoxon <strong>p = 0.031</strong>, the minimum for n = 6, with all 6 pairs in the same direction. <strong>H2 is supported on hardware</strong> (needs ≥ 30%).</p>
+</li>
+<li>
+<p><strong>R-C1, final configuration:</strong> energy_identified <strong>18/18</strong>, 95% Clopper–Pearson <strong>81–100%</strong>. The lower bound now exceeds the 80% requirement.</p>
+</li>
+<li>
+<p><code>docs/report.md</code> and <code>README.md</code> were finalised with every result. The go/no-go is written up as an assessment (GO, with R-S3 and R-S5 recorded as deviations) for the owner to confirm.</p>
+</li>
+<li>
+<p><strong>Hardware experiments are complete.</strong> Summary against the pre-registered criteria:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Criterion</th>
+<th>Result</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>R-C1, R-C2, R-S1, R-S2, R-S4, R-A1, R-A2</td>
+<td>met</td>
+</tr>
+<tr>
+<td>R-S3, R-S5, R-S6</td>
+<td>not met</td>
+</tr>
+<tr>
+<td>H2</td>
+<td>supported</td>
+</tr>
+<tr>
+<td>H1 (≈ 1.5× faster, target 2×)</td>
+<td>not supported</td>
+</tr>
+<tr>
+<td>H3</td>
+<td>not supported</td>
+</tr>
+</tbody>
+</table></div>
+<p>Dropped for lack of time, and listed as future work: E6 perturbations, E7 sim-to-real, the remaining ablations, and a fix for the segment-transition steps in open-loop design.</p>
+</li>
+</ul>
+<h2 id="2026-09-29-tue-explanation-docs-digital-twin-demo-video-recording">2026-09-29 (Tue): explanation docs, digital twin, demo video recording</h2>
+<ul>
+<li><strong>Docs for the owner:</strong>
+<ul>
+<li><code>docs/how_it_works.md</code>: every part, why and how.</li>
+<li><code>docs/interview/own_words.md</code>: the core pieces in plain words, with follow-up questions.</li>
+<li><code>docs/interview/interview_prep.md</code>: pitches, numbers, failure stories, likely questions.</li>
+<li>In writing them, the report's account of why the H2 ablation fails was corrected. It ignores ≈ 147 ms of camera latency, ≈ 31 ms of servo lag and ≈ 53 ms of command-filter delay: ≈ 230 ms ≈ 90° of the swing, so its velocity-proportional pushes add almost no energy. The earlier text cited only the camera delay (≈ 57°).</li>
+</ul>
+</li>
+<li><strong>Demo video recorder:</strong> <code>pal.hw.recorder.VideoRecorder</code> draws the tracked markers, the rod angle and the amplitude bar with its target band. It runs in its own thread with a bounded queue, and drops video frames rather than ever delaying the control loop. <code>e5_control.py --record-video DIR</code>.</li>
+<li><strong>Digital twin:</strong> <code>docs/twin.html</code> (three.js) replays real trials exported by <code>analysis/export_replay.py</code> (camera-measured θ and φ at 30 fps; <code>docs/replay/replay_data.js</code>, because Firefox cannot fetch JSON from file://). It has a side-by-side mode (full controller vs ablation at the same target) and camera presets; H hides the interface for recording.
+<ul>
+<li><strong>First load was blank:</strong> a requestAnimationFrame timestamp earlier than the restart time gave index −1. Fixed by clamping, and the loop now schedules its next frame first.</li>
+</ul>
+</li>
+<li><strong>Recording session:</strong>
+<ul>
+<li>Calibration check FAIL, so recalibrated: rod/arm 2.912, trim −87.9 µs, home 1412 µs.</li>
+<li><strong>Two recorded 35° trials</strong> (order seed 30; <code>runs/video/*.mp4</code>, 2057 and 2334 frames, none dropped; <code>runs/</code> is not committed):
+<ul>
+<li>full controller: settle 6.2 s, RMS 1.33°;</li>
+<li>ablation: never reached the target, RMS 11.7°.</li>
+</ul>
+</li>
+<li>Same frozen configuration C4, so the pair counts in the results: <strong>R-C1 19/19 (95% CI 82–100%); H2 over 7 pairs: median 0.57° against 11.96°, −95%, p = 0.0156.</strong> All documents were updated to these numbers; the report notes that the 7th pair was recorded for the video.</li>
+</ul>
+</li>
+</ul>
+<h2 id="2026-09-29-tue-wrap-up-camera-position-measured">2026-09-29 (Tue): wrap-up, camera position measured</h2>
+<ul>
+<li><strong>Status:</strong> all experiments in the compressed scope are done and reported; the rig can be taken down. The raw runs stay on the owner's drive (not committed).</li>
+<li><strong>Camera position (owner, tape):</strong> lens ≈ 1.6 m from the pink dot at rest, ≈ 97 cm above the floor, so ≈ 1.52 m in front of the swing plane and ≈ 13° looking down (<code>hardware_setup.md</code> §9).</li>
+<li><strong>Digital twin updated to match:</strong>
+<ul>
+<li>The camera moved from the earlier estimate (1.2 m high, 2.6 m back) to the measured position. The &quot;Camera's exact view&quot; preset takes its aim and field of view (17.2°) from the final calibration: pivot and pink dot land within ≈ 2% of their pixel positions in the real image.</li>
+<li>A new default &quot;From the camera&quot; view (same position, aimed lower, 20°) keeps the swing clear of the split-screen titles and HUD cards.</li>
+<li>The LED light was moved to the same height as the camera, ≈ 45° to the side (position still estimated).</li>
+<li>The video's twin segments (1, 4, 5, 8) were re-rendered.</li>
+</ul>
+</li>
+<li><strong>Final calibration committed:</strong> <code>configs/rig_calibration.yaml</code> from the last session (trim −87.9 µs, 1530 px/m).</li>
+<li><strong>Twin background and default view (owner's request):</strong> the scene now sits on a neutral mid grey (<code>--stage</code>, floor and backdrop, in both light and dark themes). The white sheet had too little contrast against the old near-white floor, and the dark theme's black backdrop was harsh. The default camera is now a three-quarter view from the front left (<code>iso</code> preset) showing the desk, electronics, pendulum and light gate together.</li>
+<li><strong>Pivot layering corrected (owner):</strong> front to back it is now yellow arm (green dot on its face) → ruler → red axle head → sheet, as on the rig; the ruler had been drawn in front of the arm and hid the green dot. The yellow arm now runs 1.3 cm past the pivot, as in the photo.</li>
+<li><strong>Split-screen frames (owner):</strong> each replay view now has its own frame in its controller's colour (blue: full controller, orange: ablation), with a page-coloured gap between them. The frames start below the control bar, and each info card sits inside its own view.</li>
+</ul>
+<h2 id="2026-11-05-thu-public-project-page">2026-11-05 (Thu): public project page</h2>
+<ul>
+<li><strong>Decision (owner):</strong> the repository stays private. The documentation, figures, 3D pages and the report are published as a subsection of the owner's site, <code>yagyaansh.com/projects/pendulum-lab/</code>, built by <code>scripts/publish_site.py</code> (procedure: <code>publishing.md</code>). The interview notes and the outreach drafts are never copied; the build fails if they are.</li>
+<li><strong>Privacy check:</strong> no e-mail addresses, phone numbers, postal details, local paths or family and place names in any published doc. The rig photo shows the desk and nothing else.</li>
+<li><strong>Theme (owner):</strong> academic rather than the site's own theme: black on white, Computer Modern, booktabs tables, numbered figures, no dark mode. The site's <code>projects.css</code> is not used.</li>
+<li><strong>Markdown rendering:</strong> python-markdown flattened the docs' lists (they rely on CommonMark: a list may follow a paragraph directly, and nested items are indented 2–3 spaces). Replaced by markdown-it-py. Pandoc's own Markdown reader has the same rule, so the PDF preprocess inserts the blank lines; its CommonMark reader was tried and rejected because it ignores table column widths and raw LaTeX.</li>
+<li><strong>Report PDF (owner):</strong> a standard LaTeX project report instead of a printed web page: title page, abstract, contents, numbered sections, three figures with captions (rig photo, E3 held-out error, E5 amplitude control: the figures are now embedded in <code>report.md</code> too), running header. pandoc 3.13 (installed to <code>D:\Installations\pandoc</code>) and the existing Tectonic. Latin Modern is loaded by file name; Greek letters and math symbols are mapped to math mode because the text font lacks them. 10 pages, 1 MB.</li>
+<li><strong>Site list:</strong> <code>projects.html</code> entry renamed &quot;Pendulum Lab&quot; and linked. Not yet pushed: the owner reviews first, then uploads the video and the embed is added with <code>--youtube</code>.</li>
+</ul>
+</main>
+<footer>
+  <p>Pendulum Lab &middot; Yagyaansh Khaneja &middot; 2026. Every number on these pages comes from a logged run.
+  The source code is in a private repository.</p>
+  <p><a href="index.html">Overview</a> &middot; <a href="twin.html">3D replay</a> &middot;
+  <a href="report.html">Technical report</a> &middot; <a href="report.pdf">PDF</a></p>
+</footer>
+</body>
+</html>

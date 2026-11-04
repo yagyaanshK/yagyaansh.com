@@ -1,0 +1,50 @@
+[
+ {
+  "id": "20260929-032041_e5_energy_identified_35deg",
+  "controller": "energy_identified",
+  "label": "full controller (servo + latency model)",
+  "target_deg": 35.0,
+  "rms_err_deg": 1.3293769650682543,
+  "t_settle": 6.246254075005709
+ },
+ {
+  "id": "20260929-031919_e5_energy_naive_35deg",
+  "controller": "energy_naive",
+  "label": "ablation: no servo / latency model",
+  "target_deg": 35.0,
+  "rms_err_deg": 11.687722475462206,
+  "t_settle": Infinity
+ },
+ {
+  "id": "20260929-015256_e5_energy_identified_25deg",
+  "controller": "energy_identified",
+  "label": "full controller (servo + latency model)",
+  "target_deg": 25.0,
+  "rms_err_deg": 0.6572450891755328,
+  "t_settle": 5.5036213750063325
+ },
+ {
+  "id": "20260929-013607_e5_energy_naive_25deg",
+  "controller": "energy_naive",
+  "label": "ablation: no servo / latency model",
+  "target_deg": 25.0,
+  "rms_err_deg": 17.21292142432209,
+  "t_settle": Infinity
+ },
+ {
+  "id": "20260929-015408_e5_energy_identified_15deg",
+  "controller": "energy_identified",
+  "label": "full controller (servo + latency model)",
+  "target_deg": 15.0,
+  "rms_err_deg": 0.34528171261034574,
+  "t_settle": 8.985751075000735
+ },
+ {
+  "id": "20260929-014922_e5_energy_naive_15deg",
+  "controller": "energy_naive",
+  "label": "ablation: no servo / latency model",
+  "target_deg": 15.0,
+  "rms_err_deg": 9.86710038003459,
+  "t_settle": Infinity
+ }
+]

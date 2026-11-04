@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="Technical report, 29 September 2026. Repository: pendulum-active-id. Every number in this report comes from a logged run; the generated result pages are in d...">
+<meta name="author" content="Yagyaansh Khaneja">
+<link rel="icon" type="image/x-icon" href="../../assets/images/art.svg">
+<title>A self-driving pendulum lab: active system identification and latency-compensated control on a low-cost rig | Pendulum Lab | Yagyaansh Khaneja</title>
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+<link rel="stylesheet" href="site.css">
+</head>
+<body class="doc">
+<nav class="top" aria-label="Breadcrumb">
+  <a href="../../index.html" title="Yagyaansh Khaneja">yagyaansh.com</a><span class="crumb" aria-hidden="true">/</span>
+  <a href="../../projects.html" title="Projects">Projects</a><span class="crumb" aria-hidden="true">/</span>
+  <a href="index.html" title="Pendulum Lab">Pendulum Lab</a>
+</nav>
+<main>
+<h1 id="a-self-driving-pendulum-lab-active-system-identification-and-latency-compensated-control-on-a-low-cost-rig">A self-driving pendulum lab: active system identification and latency-compensated control on a low-cost rig</h1>
+<p><strong>Technical report, 29 September 2026.</strong> Repository: <code>pendulum-active-id</code>. Every number in this report comes from a logged run; the generated result pages are in <a href="index.html#documents"><code>docs/results/</code></a>, and the day-by-day record, failures included, is in <a href="engineering_log.html"><code>docs/engineering_log.md</code></a>.</p>
+<h2 id="1-summary">1. Summary</h2>
+<p>A camera watches a pendulum that hangs from the arm of a hobby servo. With no human in the loop, the system:</p>
+<ol>
+<li><strong>identifies the pendulum's physics</strong> from its own experiments, and chooses the next experiment by Bayesian D-optimal design, under a safety constraint;</li>
+<li><strong>estimates the pendulum's state</strong> from frames that arrive about 150 ms late, using an extended Kalman filter with delayed measurements and forward prediction;</li>
+<li><strong>controls the swing amplitude</strong> with an energy-shaping controller built on the identified model.</li>
+</ol>
+<p>The rig is built only from parts I already owned: an Arduino UNO, an SG90 micro-servo, a 30 cm steel ruler, a breadboard power module, a photoresistor light gate, and a Sony α7 IV used as a USB webcam.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Question</th>
+<th>Result on the physical rig</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Can the identified model control the swing? (R-C1)</td>
+<td><strong>Yes: 19/19 trials</strong> at 15°, 25° and 35° reach and stay within ±2° in 4–12 s. The 95% CI of 82–100% establishes the ≥ 80% requirement.</td>
+</tr>
+<tr>
+<td>Is the camera's timing trustworthy? (R-S4)</td>
+<td><strong>Yes:</strong> the swing period from the camera matches an independent light gate, read by the microcontroller's clock, within <strong>0.07–0.09%</strong>.</td>
+</tr>
+<tr>
+<td>Does the identified model agree with an independent measurement?</td>
+<td><strong>Yes:</strong> the identified pendulum gives a small-swing period of 0.934 s; the light gate measured 0.933 s.</td>
+</tr>
+<tr>
+<td>Do self-chosen experiments identify the system faster than a standard sweep? (H1)</td>
+<td>D-optimal reached within 10% of the held-out noise floor in a median of <strong>10 s against 15 s</strong> for a chirp. It was faster in 5 of 6 complete pairs and tied in 1 (median ratio 0.67, paired Wilcoxon p = 0.06). <strong>The pre-registered target (ratio ≤ 0.5) was not met.</strong></td>
+</tr>
+<tr>
+<td>Does modelling the servo and the latency improve control? (H2)</td>
+<td><strong>Yes: a 95% lower amplitude error</strong> (median 0.57° against 12.0° over 7 interleaved pairs, paired Wilcoxon p = 0.016). Without the model the controller never reached any target (0/7).</td>
+</tr>
+<tr>
+<td>Can the damping law be identified? (H3)</td>
+<td><strong>No:</strong> viscous and quadratic damping are indistinguishable on held-out data (16 runs, p = 0.43), and there is no measurable dry friction.</td>
+</tr>
+<tr>
+<td>Camera latency ≤ 150 ms (go/no-go)</td>
+<td><strong>Failed as measured:</strong> 151–164 ms median. Control works regardless.</td>
+</tr>
+<tr>
+<td>Static angle accuracy ≤ 1° (R-S3)</td>
+<td><strong>Failed as measured:</strong> 1.42° RMS. The reference was a hand-held ruler aligned by eye from the side (see §5.1).</td>
+</tr>
+</tbody>
+</table></div>
+<p>The requirements and hypotheses were frozen before any hardware data existed. Three criteria were revised once, after the simulation campaign and before any hardware identification data (v1.1, §2). Every failure above is reported against the criterion as written.</p>
+<h2 id="2-hypotheses-and-pre-registration">2. Hypotheses and pre-registration</h2>
+<ul>
+<li><strong>H1:</strong> Bayesian D-optimal excitation reaches a held-out 3 s prediction error within 10% of the noise floor in ≤ 50% of the experiment time a chirp needs.</li>
+<li><strong>H2:</strong> Modelling the servo and compensating the camera latency reduces the closed-loop RMS amplitude error by ≥ 30%, compared with the same controller without them.</li>
+<li><strong>H3:</strong> Viscous + Coulomb and viscous + quadratic damping are distinguishable by held-out likelihood.</li>
+</ul>
+<p><strong>Revision v1.1</strong> (2026-09-27, applied after the simulation campaign and before hardware identification) changed three things:</p>
+<ul>
+<li><strong>H1:</strong> the wording at v1.0 compared the protocols at the full budget, where the chirp had already reached the noise floor, so it mostly measured noise.</li>
+<li><strong>R-I1:</strong> near 1 Hz, only the servo's <em>combined</em> phase delay is identifiable, not its bandwidth and dead time separately.</li>
+<li><strong>Go/no-go item 3:</strong> revised to match.</li>
+</ul>
+<p>The v1.0 wording is kept in <a href="requirements.html"><code>requirements.md</code></a>, and the simulation results are reported against both versions.</p>
+<h2 id="3-system">3. System</h2>
+<p><strong>Hardware:</strong></p>
+<ul>
+<li>An SG90 servo on a separate 5 V supply. Powering it from the UNO's 5 V pin dropped the rail by 0.7 V at every move; the separate supply cut that to 0.02 V.</li>
+<li>The arm is a 8.1 cm lever.</li>
+<li>The pendulum is a 30 cm steel ruler hung from the arm tip (L_eq ≈ 21.7 cm).</li>
+<li>Two coloured paper markers: green on the pivot, pink on the rod.</li>
+<li>A white LED and a photoresistor form a light gate at the bottom of the swing.</li>
+<li>A red LED in the camera's view is used to measure latency.</li>
+<li>The replication guide, with wiring hole by hole, is <a href="hardware_setup.html"><code>hardware_setup.md</code></a>.</li>
+</ul>
+<p><img src="media/rig_front.jpg" alt="The rig from the camera's side. The ruler hangs from the servo arm (top) in front of a printed protractor sheet. The camera tracks the green marker on the pivot and the pink marker on the rod." /></p>
+<p><strong>Firmware:</strong> the board is a thin I/O slave.</p>
+<ul>
+<li>Servo pulses; pings for clock synchronisation; light-gate edges timestamped in µs.</li>
+<li>A servo <strong>release</strong> command: no pulses, so the servo goes limp.</li>
+<li>A servo <strong>home</strong> stored in EEPROM, so the arm powers up pointing straight down.</li>
+</ul>
+<p><strong>Software</strong> (Python, 89 tests, CI on every push):</p>
+<ul>
+<li><strong>Model:</strong> a rigid pendulum on an accelerating pivot, with viscous, Coulomb and quadratic damping; the servo is a delayed second-order position loop with rate and acceleration limits.</li>
+<li><strong>Identification:</strong> a windowed simulation-error fit with Gaussian priors and a Laplace posterior (numba, 1–5 s per fit).</li>
+<li><strong>Experiment design:</strong> a posterior-averaged D-optimal criterion over a library of sines, two-tones and bursts. Any candidate predicted to exceed 60°, or to leave more than 45° at its end, is rejected.</li>
+<li><strong>Estimation:</strong> an EKF over [θ, ω, φ, φ̇] that accepts late frames. Its measurement noise grows with angular rate × timestamp jitter, and an innovation gate rejects outliers.</li>
+<li><strong>Control:</strong> energy shaping with an integral term; commands are slew-limited and low-pass filtered, with the filter's delay added to the prediction horizon.</li>
+<li><strong>Safety stops:</strong> hold φ = 0 on |θ| &gt; 70°, on a stalled camera, on a lost marker, or on repeated rejected frames.</li>
+<li><strong>Architecture:</strong> one hardware-abstraction interface, implemented by both the simulator and the real rig, so every script also runs as a dry run against a simulated rig.</li>
+</ul>
+<h2 id="4-method-on-the-rig">4. Method on the rig</h2>
+<ol>
+<li><strong>Calibration from the markers alone:</strong>
+<ul>
+<li>The servo sweeps ±30°, and a circle fit to the green marker's positions gives the servo axis (fit RMS 0.07–0.23 px).</li>
+<li>The hanging rod gives the camera roll.</li>
+<li>The arm angle against the pulse width gives the servo gain and zero.</li>
+<li>A 15 s check compares the live feed with the saved calibration. The camera re-zoomed or shifted after several restarts, and the check caught every one.</li>
+</ul>
+</li>
+<li><strong>Latency:</strong> the board toggles the red LED at random times; the frame that first shows each toggle gives the delay. The capture latency (≈ 145 ms) is subtracted from each frame's arrival time.</li>
+<li><strong>Identification:</strong> open-loop chirps and D-optimal segments, fitted to all recorded data. Frames captured while the laptop is computing between segments are excluded, so that the protocol that computes longer gets no free data.</li>
+<li><strong>Control trials:</strong> 30 s each. Before and after every trial the servo is released until the camera sees the pendulum at rest: a <em>holding</em> SG90 kept pumping the swing through its dead band. Each trial logs every servo command, and the command-jitter statistics are reported.</li>
+</ol>
+<h2 id="5-results">5. Results</h2>
+<h3 id="51-sensing">5.1 Sensing</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Requirement</th>
+<th>Result</th>
+<th>Verdict</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>R-S1: frame rate</td>
+<td>30.0 fps at 1280×720 (MJPG, DirectShow), from the frame logs</td>
+<td>Met (at a higher resolution than specified)</td>
+</tr>
+<tr>
+<td>R-S2: markers detected in ≥ 98% of frames</td>
+<td>100% of frames in every identification run (600–750 frames each)</td>
+<td>Met</td>
+</tr>
+<tr>
+<td>R-S3: static angle, RMS ≤ 1.0°</td>
+<td><strong>1.42°</strong> (0.89° after removing a common +1.10° offset). Hand-held reference, aligned by eye from the side to stay out of the camera's view. The owner considers ±45° the most reliable points: errors −0.29° and +1.60°.</td>
+<td><strong>Fail as measured</strong></td>
+</tr>
+<tr>
+<td>R-S4: camera vs light-gate period ≤ 0.2%</td>
+<td><strong>0.067–0.093%</strong> over 3 hands-free free decays</td>
+<td>Met</td>
+</tr>
+<tr>
+<td>R-S5: latency median ≤ 150 ms (go/no-go)</td>
+<td>151–164 ms across sessions (DirectShow). Media Foundation gave 153 ms, but with duplicate frames and stutter.</td>
+<td><strong>Fail as measured</strong></td>
+</tr>
+<tr>
+<td>R-S6: clock offset ≤ 2 ms</td>
+<td>1.6–2.5 ms</td>
+<td>Marginal fail</td>
+</tr>
+</tbody>
+</table></div>
+<p>The camera's noise at rest is 0.024° RMS (0.1 px centroid jitter), so the R-S3 error is dominated by the reference, not the camera.</p>
+<h3 id="52-identification-h1">5.2 Identification (H1)</h3>
+<ul>
+<li><strong>Held-out set:</strong> a multisine, a free decay from 25° and a burst, recorded once and never fitted.</li>
+<li><strong>Campaign:</strong> 8 blocks, each pairing one chirp unit with one D-optimal unit in a random order (30 s each, 5 s segments). They ran over two sessions, and 16 units are valid.
+<ul>
+<li>One further unit was invalidated because the rod stuck at its pivot (owner report). Its κ and held-out error were off.</li>
+<li>One unit was interrupted and never saved a record.</li>
+</ul>
+</li>
+<li><strong>Noise floor:</strong> held-out 3 s NRMSE of one fit to all 16 units pooled = <strong>0.0461</strong>.</li>
+</ul>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th></th>
+<th>Time to within 10% of the floor</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>D-optimal</td>
+<td><strong>median 10 s</strong></td>
+</tr>
+<tr>
+<td>Chirp</td>
+<td><strong>median 15 s</strong></td>
+</tr>
+<tr>
+<td>Ratio, per complete pair</td>
+<td>0.67, 0.67, 0.67, 0.50, 1.00, 0.67</td>
+</tr>
+</tbody>
+</table></div>
+<ul>
+<li><strong>Median ratio 0.67:</strong> D-optimal was faster in 5 of 6 complete pairs and tied in 1. The paired Wilcoxon p = 0.06 is the smallest achievable with 5 decisive pairs.</li>
+<li>In 2 blocks at least one protocol never came within 10% in 30 s.</li>
+<li><strong>H1 as pre-registered (ratio ≤ 0.5) is not supported.</strong> The self-chosen experiments are about a third faster, not twice as fast. (<a href="results/e3_hardware.html"><code>results/e3_hardware.md</code></a>, <a href="figures/e3_hw_nrmse.png"><code>figures/e3_hw_nrmse.png</code></a>)</li>
+<li><strong>Why the advantage is smaller than in simulation</strong> (where it was 5 s against 15 s, p ≈ 2e-11):
+<ul>
+<li>D-optimal's first segment is designed from the prior. It is always a strong resonant sine, and it predicts the held-out set worse than the chirp's gentle low-frequency start.</li>
+<li>The 5 s segments make the time resolution coarse.</li>
+<li><strong>Known flaw:</strong> open-loop segments started from 0° while the servo was still holding the previous segment's last angle. So D-optimal units contain 4–6 instantaneous steps of 3–8.8° (the owner saw these as jerks; the chirp is continuous and has one 3.2° step at the end). The steps are logged commands, so the fit models them correctly. But they are unplanned excitation that only D-optimal received, which, if anything, favours it.</li>
+<li><strong>Fix for future runs:</strong> ramp each segment in and out, and slew-limit open-loop commands.</li>
+</ul>
+</li>
+</ul>
+<p><img src="figures/e3_hw_nrmse.png" alt="Held-out prediction error, relative to the noise floor, against cumulative excitation time on hardware. Thick lines: medians of 8 units each for Bayesian D-optimal and chirp excitation; thin lines: individual units, clipped at 3.5×; dashed: 10% above the floor." /></p>
+<p><strong>Joint identification (26° and 36° chirps):</strong></p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>κ</td>
+<td><strong>4.610 ± 0.002 m⁻¹</strong> (small-swing period 0.934 s; light gate 0.933 s)</td>
+</tr>
+<tr>
+<td>η</td>
+<td>0.034 ± 0.006</td>
+</tr>
+<tr>
+<td>β, μ</td>
+<td>0</td>
+</tr>
+<tr>
+<td>ω_n</td>
+<td>45.8 ± 7.0 rad/s</td>
+</tr>
+<tr>
+<td>dead time</td>
+<td>0 ± 5 ms</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="53-damping-law-h3">5.3 Damping law (H3)</h3>
+<p><strong>Not supported.</strong> Across 16 identification runs:</p>
+<ul>
+<li>the Coulomb coefficient fits to 0;</li>
+<li>viscous and quadratic laws predict the held-out data equally well (quadratic better in 7/16, paired Wilcoxon p = 0.43);</li>
+<li>BIC prefers plain viscous damping.</li>
+</ul>
+<p>Runs with larger swings (D-optimal, ≥ 35°) lean quadratic, and gentler ones lean viscous. That is consistent with air drag that only matters at large amplitude (<a href="results/h3_hardware.html"><code>results/h3_hardware.md</code></a>).</p>
+<h3 id="54-control-r-c1-r-c2-h2">5.4 Control (R-C1, R-C2, H2)</h3>
+<p><strong>Final configuration: R-C1 met on 19/19 trials, 95% CI 82–100%</strong> (<a href="results/e5_hardware.html"><code>results/e5_hardware.md</code></a>, <a href="figures/e5_hw_amplitude.png"><code>figures/e5_hw_amplitude.png</code></a>):</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Target</th>
+<th>Pass</th>
+<th>Settle</th>
+<th>RMS error</th>
+<th>Max overshoot</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>15°</td>
+<td>8/8</td>
+<td>median 7.8 s</td>
+<td>0.39°</td>
+<td>2.2°</td>
+</tr>
+<tr>
+<td>25°</td>
+<td>5/5</td>
+<td>median 5.4 s</td>
+<td>0.57°</td>
+<td>1.4°</td>
+</tr>
+<tr>
+<td>35°</td>
+<td>5/5</td>
+<td>median 4.5 s</td>
+<td>1.14°</td>
+<td>1.6°</td>
+</tr>
+</tbody>
+</table></div>
+<p>No safety stops, no board resets, no clipped commands. Servo commands stayed smooth: largest step ≤ 2.1°, ≤ 117°/s.</p>
+<p><img src="figures/e5_hw_amplitude.png" alt="Swing amplitude against time in the final configuration, for targets of 15°, 25° and 35°. Blue: the controller with the identified servo and latency model (19 trials), every one entering the ±2° band (grey) and staying there. Orange: the same controller without that model (7 trials), which never reaches a target." /></p>
+<p><strong>Getting there</strong> (48 hardware trials in 4 configurations, all reported):</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Configuration</th>
+<th>Result</th>
+<th>What went wrong</th>
+<th>Fix</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>First</td>
+<td>7/14</td>
+<td>Two false safety stops. At large swings the controller chattered, reversing the servo 8–14 times per second at the 200°/s slew limit.</td>
+<td>Frame-timestamp jitter (≈ 10 ms) at 170–240°/s looked like 3–5° outliers: the EKF now scales measurement noise with rate × jitter. A 3 Hz command filter, with its delay compensated.</td>
+</tr>
+<tr>
+<td>Second</td>
+<td>7/9</td>
+<td>At 15°, the ±1° commands sat inside the SG90's dead band.</td>
+<td>Wider, faster integral action on the rig.</td>
+</tr>
+</tbody>
+</table></div>
+<ul>
+<li><strong>R-C2:</strong> the safety stops fired correctly on hardware: an implausible estimate, a lost marker, rejected frames.</li>
+<li><strong>H2, supported on hardware.</strong> 6 interleaved pairs (2 sessions × 15/25/35°), comparing the full controller with the same controller without the servo model and without prediction over the latency.</li>
+</ul>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Target</th>
+<th>Full controller RMS</th>
+<th>Without the model RMS</th>
+<th>What the ablated controller did</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>15°</td>
+<td>0.43° / 0.35°</td>
+<td>10.1° / 9.9°</td>
+<td>stalled at ≈ 5°</td>
+</tr>
+<tr>
+<td>25°</td>
+<td>0.67° / 0.66°</td>
+<td>17.2° / 17.5°</td>
+<td>stalled at ≈ 7–8°</td>
+</tr>
+<tr>
+<td>35°</td>
+<td>1.36° / 1.16°</td>
+<td>16.5° / 12.0°</td>
+<td>crept toward 20°, chattering at the 200°/s slew limit</td>
+</tr>
+</tbody>
+</table></div>
+<ul>
+<li>Median 0.57° against 12.0°: a <strong>95% reduction</strong> (H2 needs ≥ 30%). The paired Wilcoxon p = 0.016 is the smallest possible with 7 pairs (the 7th pair was recorded with the same configuration for the demo video).</li>
+<li>The ablated controller reached no target (0/7).</li>
+<li><strong>Why the ablation fails:</strong> it acts on the latest frame's state and assumes an instantaneous servo. So it ignores ≈ 147 ms of camera latency, ≈ 31 ms of servo lag (dead time + 2ζ/ω_n with the identified ω_n = 45.8 rad/s) and ≈ 53 ms of command-filter delay: ≈ 230 ms in all, which is ≈ 90° of the 0.93 s swing.</li>
+<li>The energy law pushes in proportion to the rod's velocity. Delayed by a quarter period, the push is almost uncorrelated with the velocity, so the net energy input per swing is close to zero and the swing stalls at a few degrees. The full controller predicts the state forward over exactly these delays.</li>
+</ul>
+<h2 id="6-what-went-wrong-and-what-it-taught">6. What went wrong, and what it taught</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Problem</th>
+<th>Diagnosis</th>
+<th>Fix</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Board browned out on every servo move</td>
+<td>Servo powered from the UNO's 5 V</td>
+<td>Separate supply with a shared ground</td>
+</tr>
+<tr>
+<td>Swing capped at exactly 15°</td>
+<td>The rod was hitting the light-gate parts (owner's observation)</td>
+<td>Parts moved clear; pivot play reduced</td>
+</tr>
+<tr>
+<td>Camera switched itself off every 20–25 min; views shifted after restarts</td>
+<td>Overheating; stabilisation and zoom re-centring at power-up</td>
+<td>Stabilisation off; a calibration check after every restart; sessions capped at ≈ 12 min; a stall stop in the control loop</td>
+</tr>
+<tr>
+<td>Tracker locked onto a tape roll, a red LED, a red strip</td>
+<td>Colour alone is ambiguous; the pink marker reads as red</td>
+<td>Search restricted to where each marker can physically be, taking the candidate closest to the expected distance, not the largest</td>
+</tr>
+<tr>
+<td>Pendulum never came to rest between trials</td>
+<td>A holding SG90 reacts to the rod through its dead band and pumps energy (a limit cycle at ≈ 13°)</td>
+<td>Firmware release command: the servo goes limp while waiting for rest</td>
+</tr>
+<tr>
+<td>Duplicate frames and stutter</td>
+<td>Media Foundation driver</td>
+<td>Back to DirectShow (+10 ms latency); duplicate frames dropped</td>
+</tr>
+<tr>
+<td>D-optimal got free data while &quot;thinking&quot;</td>
+<td>Time runs on during the laptop's computation</td>
+<td>Pause frames excluded from the fits</td>
+</tr>
+<tr>
+<td>A held-out record leaked into the H3 training set</td>
+<td>A file pattern was too broad</td>
+<td>Caught before reporting; selection made explicit</td>
+</tr>
+<tr>
+<td>A calibration check passed on the wrong reference</td>
+<td>Sign error in the expected marker position</td>
+<td>Found because a fresh calibration failed its own check</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="7-requirements-scorecard-and-gono-go">7. Requirements scorecard and go/no-go</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Area</th>
+<th>Met</th>
+<th>Not met</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Sensing</td>
+<td>R-S1, R-S2, R-S4</td>
+<td>R-S3 (hand-held reference), R-S5 (latency 151–164 ms), R-S6 (marginal)</td>
+</tr>
+<tr>
+<td>Actuation</td>
+<td>R-A1, R-A2 (0 resets over every campaign)</td>
+<td>R-A3 partially: dead time and ω_n identified with uncertainty; the rate limit is fixed, not identified</td>
+</tr>
+<tr>
+<td>Model</td>
+<td>R-M1–R-M6 (tests)</td>
+<td></td>
+</tr>
+<tr>
+<td>Identification (simulation)</td>
+<td>R-I3 (after a terminal constraint was added)</td>
+<td>R-I1 v1.1 (D-optimal 72%, limited by μ), R-I2 (D-optimal coverage 88% &lt; 90%; servo-delay bias ≈ 0.5 ms)</td>
+</tr>
+<tr>
+<td>Control</td>
+<td>R-C1 (19/19, CI 82–100%), R-C2</td>
+<td></td>
+</tr>
+<tr>
+<td>Reproducibility</td>
+<td>R-R1–R-R4 (CI green)</td>
+<td></td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Go/no-go:</strong> item 1 (R-S3) and item 2 (R-S5) fail as measured; item 3 (simulation, κ and delay within 5%) is met. The purpose of the gate was to decide whether the owned-parts rig could support the month's experiments. The control and identification results above show that it can. <strong>Assessment: GO</strong>, with both failures recorded as deviations, not as moved thresholds. This is for the owner to confirm; with the compressed timeline the gate is a formality.</p>
+<h2 id="8-limitations-and-future-work">8. Limitations and future work</h2>
+<ul>
+<li><strong>Angle reference:</strong> tape the rod at each line, capture within ±2°, or use an encoder (AS5600).</li>
+<li><strong>Latency:</strong> try the laptop webcam or a cheap USB webcam. That also fixes the Sony's heat limit.</li>
+<li><strong>Actuator model:</strong> the arm moved 7.9° for a 5° command at large swings (σ_φ 1.5°). Arm compliance and dead band are not modelled, and they are the most likely cause of the remaining sim-to-real gap at 35°.</li>
+<li><strong>H1:</strong> design the first segment for the held-out objective, or use a gentler prior-safe first move. More blocks, and a finer time resolution than 5 s segments.</li>
+<li><strong>Not done:</strong> perturbation experiments (added mass, shortened rod, re-identification after a change), a sim-to-real trajectory comparison, and the remaining ablations. They were dropped when the timeline was compressed.</li>
+</ul>
+<h2 id="9-reproduce">9. Reproduce</h2>
+<p>See the README (&quot;Running the experiments&quot;) and <a href="test_plan.html"><code>test_plan.md</code></a>, which covers the session routine and every command. <code>python analysis/hw_results.py</code>, <code>analysis/e3_hw.py</code> and <code>analysis/h3_hw.py</code> rebuild every hardware table and figure in this report from the logged runs.</p>
+</main>
+<footer>
+  <p>Pendulum Lab &middot; Yagyaansh Khaneja &middot; 2026. Every number on these pages comes from a logged run.
+  The source code is in a private repository.</p>
+  <p><a href="index.html">Overview</a> &middot; <a href="twin.html">3D replay</a> &middot;
+  <a href="report.html">Technical report</a> &middot; <a href="report.pdf">PDF</a></p>
+</footer>
+</body>
+</html>

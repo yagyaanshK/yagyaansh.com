@@ -1,0 +1,411 @@
+/* Pendulum Lab pages on yagyaansh.com: an academic, print-like theme. Black text on white,
+   Computer Modern (the LaTeX default) served from jsDelivr, booktabs-style tables, numbered
+   figure captions. Self-contained: these pages do not use the site's other stylesheets. */
+
+@font-face {
+	font-family: "CMU Serif";
+	font-style: normal;
+	font-weight: 400;
+	font-display: swap;
+	src: url("https://cdn.jsdelivr.net/npm/computer-modern@0.1.3/fonts/cmu-serif-500-roman.woff2") format("woff2");
+}
+
+@font-face {
+	font-family: "CMU Serif";
+	font-style: italic;
+	font-weight: 400;
+	font-display: swap;
+	src: url("https://cdn.jsdelivr.net/npm/computer-modern@0.1.3/fonts/cmu-serif-500-italic.woff2") format("woff2");
+}
+
+@font-face {
+	font-family: "CMU Serif";
+	font-style: normal;
+	font-weight: 700;
+	font-display: swap;
+	src: url("https://cdn.jsdelivr.net/npm/computer-modern@0.1.3/fonts/cmu-serif-700-roman.woff2") format("woff2");
+}
+
+@font-face {
+	font-family: "CMU Serif";
+	font-style: italic;
+	font-weight: 700;
+	font-display: swap;
+	src: url("https://cdn.jsdelivr.net/npm/computer-modern@0.1.3/fonts/cmu-serif-700-italic.woff2") format("woff2");
+}
+
+@font-face {
+	font-family: "CMU Typewriter Text";
+	font-style: normal;
+	font-weight: 400;
+	font-display: swap;
+	src: url("https://cdn.jsdelivr.net/npm/computer-modern@0.1.3/fonts/cmu-typewriter-text-200-roman.woff2") format("woff2");
+}
+
+:root {
+	color-scheme: light;
+	--fg: #111111;
+	--bg: #ffffff;
+	--muted: #555555;
+	--rule: #111111;
+	--rule-light: #bbbbbb;
+	--tint: #f4f4f4;
+	--link: #1a3c8f;
+	--serif: "CMU Serif", "Latin Modern Roman", "Computer Modern", "Times New Roman", Times, Georgia, serif;
+	--mono: "CMU Typewriter Text", "Latin Modern Mono", ui-monospace, Consolas, Menlo, monospace;
+	--measure: 72ch;
+}
+
+*, *::before, *::after {
+	box-sizing: border-box;
+}
+
+html {
+	-webkit-text-size-adjust: 100%;
+	text-size-adjust: 100%;
+}
+
+body {
+	margin: 0;
+	background-color: var(--bg);
+	color: var(--fg);
+	font-family: var(--serif);
+	font-size: clamp(1.05rem, 1rem + 0.3vw, 1.2rem);
+	line-height: 1.45;
+}
+
+a {
+	color: var(--link);
+	text-decoration: none;
+}
+
+a:hover, a:focus-visible {
+	text-decoration: underline;
+	text-underline-offset: 0.15em;
+}
+
+a:focus-visible {
+	outline: 2px solid var(--link);
+	outline-offset: 2px;
+}
+
+nav.top {
+	max-width: var(--measure);
+	margin: 0 auto;
+	padding: 0.8rem 16px 0;
+	font-size: 0.85em;
+	color: var(--muted);
+}
+
+nav.top .crumb {
+	margin: 0 0.35em;
+}
+
+main {
+	max-width: var(--measure);
+	margin: 0 auto;
+	padding: 0 16px 3rem;
+}
+
+h1 {
+	font-size: clamp(1.7rem, 4.5vw, 2.25rem);
+	font-weight: 700;
+	line-height: 1.2;
+	margin: 1.5rem 0 1rem;
+	overflow-wrap: anywhere;
+}
+
+h2 {
+	font-size: 1.45em;
+	font-weight: 700;
+	line-height: 1.2;
+	margin: 2rem 0 0.6rem;
+}
+
+h3 {
+	font-size: 1.15em;
+	font-weight: 700;
+	margin: 1.5rem 0 0.4rem;
+}
+
+h4 {
+	font-size: 1em;
+	font-weight: 700;
+	font-style: italic;
+	margin: 1.25rem 0 0.4rem;
+}
+
+p {
+	margin: 0 0 0.9em;
+}
+
+ul, ol {
+	margin: 0 0 0.9em;
+	padding-left: 1.6em;
+}
+
+li {
+	margin-bottom: 0.3em;
+}
+
+li > ul, li > ol {
+	margin-top: 0.3em;
+}
+
+strong {
+	font-weight: 700;
+}
+
+/* Tables in the booktabs style: rules above and below, none between columns. */
+.table-wrap {
+	overflow-x: auto;
+	margin: 1rem 0 1.5rem;
+	-webkit-overflow-scrolling: touch;
+}
+
+table {
+	border-collapse: collapse;
+	min-width: 100%;
+	font-size: 0.92em;
+	line-height: 1.35;
+	border-top: 1.5px solid var(--rule);
+	border-bottom: 1.5px solid var(--rule);
+}
+
+th, td {
+	padding: 0.4em 0.7em;
+	vertical-align: top;
+	text-align: left;
+}
+
+th {
+	font-weight: 700;
+	border-bottom: 1px solid var(--rule);
+}
+
+code {
+	font-family: var(--mono);
+	font-size: 0.92em;
+	overflow-wrap: anywhere;
+}
+
+pre {
+	overflow-x: auto;
+	padding: 0.8rem 1rem;
+	margin: 0 0 1.1em;
+	background: var(--tint);
+	font-size: 0.85em;
+	line-height: 1.4;
+}
+
+pre code {
+	font-size: 1em;
+}
+
+img {
+	max-width: 100%;
+	height: auto;
+	display: block;
+	margin: 1rem auto;
+}
+
+figure {
+	margin: 1.5rem 0;
+	counter-increment: figure;
+}
+
+figcaption {
+	font-size: 0.92em;
+	line-height: 1.4;
+	color: #222222;
+}
+
+figcaption::before {
+	content: "Figure " counter(figure) ". ";
+	font-weight: 700;
+}
+
+body {
+	counter-reset: figure;
+}
+
+blockquote {
+	margin: 1rem 0 1.1em;
+	padding: 0.1rem 0 0.1rem 1rem;
+	border-left: 3px solid var(--rule-light);
+	color: #222222;
+}
+
+blockquote p:last-child {
+	margin-bottom: 0;
+}
+
+hr {
+	border: 0;
+	border-top: 1px solid var(--rule-light);
+	margin: 2rem 0;
+}
+
+.private {
+	border-bottom: 1px dotted currentColor;
+	cursor: help;
+}
+
+/* Overview page */
+body.overview h1 {
+	text-align: center;
+	margin-top: 2rem;
+}
+
+.byline {
+	text-align: center;
+	margin: 0 0 0.25rem;
+}
+
+.date {
+	text-align: center;
+	color: var(--muted);
+	margin: 0 0 1.5rem;
+}
+
+.lede {
+	margin: 0 auto 1.5rem;
+	max-width: 62ch;
+	text-align: justify;
+	hyphens: auto;
+}
+
+.lede::before {
+	content: "Abstract. ";
+	font-weight: 700;
+}
+
+.links {
+	display: flex;
+	flex-wrap: wrap;
+	justify-content: center;
+	column-gap: 1.6em;
+	row-gap: 0.3em;
+	margin: 1.25rem 0 1.75rem;
+}
+
+.links a {
+	white-space: nowrap;
+}
+
+.video, .video-placeholder {
+	width: 100%;
+	aspect-ratio: 16 / 9;
+	margin: 0 0 1.5rem;
+}
+
+.video iframe {
+	width: 100%;
+	height: 100%;
+	border: 0;
+}
+
+.video-placeholder {
+	display: grid;
+	place-items: center;
+	border: 1px solid var(--rule-light);
+	background: var(--tint);
+	padding: 1rem;
+	text-align: center;
+	color: var(--muted);
+}
+
+.video-placeholder p {
+	margin: 0;
+	max-width: 40ch;
+}
+
+.stats {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+	gap: 0.5rem 1rem;
+	border-top: 1.5px solid var(--rule);
+	border-bottom: 1.5px solid var(--rule);
+	padding: 0.9rem 0;
+	margin: 1.5rem 0 2rem;
+}
+
+.stat {
+	text-align: center;
+}
+
+.stat b {
+	display: block;
+	font-size: 1.8em;
+	font-weight: 700;
+	line-height: 1.1;
+	margin-bottom: 0.3rem;
+}
+
+.stat span {
+	font-size: 0.85em;
+	line-height: 1.3;
+	color: #333333;
+	display: block;
+}
+
+.result-pass td:first-child::before {
+	content: "\2713\00a0";
+}
+
+.result-fail td:first-child::before {
+	content: "\2717\00a0";
+}
+
+.docs-list li {
+	margin-bottom: 0.5em;
+}
+
+footer {
+	max-width: var(--measure);
+	margin: 0 auto;
+	padding: 1rem 16px 2.5rem;
+	border-top: 1px solid var(--rule-light);
+	font-size: 0.85em;
+	color: var(--muted);
+}
+
+footer p {
+	margin: 0 0 0.4em;
+}
+
+@media print {
+	nav.top, footer, .links, .video, .video-placeholder {
+		display: none;
+	}
+
+	body {
+		font-size: 10.5pt;
+		line-height: 1.35;
+	}
+
+	main {
+		max-width: none;
+		padding: 0;
+	}
+
+	h2, h3, h4 {
+		break-after: avoid;
+	}
+
+	.table-wrap {
+		overflow: visible;
+	}
+
+	table, figure, pre, tr {
+		break-inside: avoid;
+	}
+
+	a {
+		color: inherit;
+	}
+
+	.private {
+		border: 0;
+	}
+}

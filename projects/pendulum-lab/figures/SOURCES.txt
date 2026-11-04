@@ -1,0 +1,2 @@
+E2: 20260927-022330_e2_sim_campaign
+E5: 20260927-032507_e5_control_sim

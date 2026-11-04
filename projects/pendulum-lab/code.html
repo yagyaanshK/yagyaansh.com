@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="This rig runs its own physics experiments. A webcam watches a pendulum hanging from a servo-driven arm. The system then:">
+<meta name="author" content="Yagyaansh Khaneja">
+<link rel="icon" type="image/x-icon" href="../../assets/images/art.svg">
+<title>Code overview | Pendulum Lab | Yagyaansh Khaneja</title>
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+<link rel="stylesheet" href="site.css">
+</head>
+<body class="doc">
+<nav class="top" aria-label="Breadcrumb">
+  <a href="../../index.html" title="Yagyaansh Khaneja">yagyaansh.com</a><span class="crumb" aria-hidden="true">/</span>
+  <a href="../../projects.html" title="Projects">Projects</a><span class="crumb" aria-hidden="true">/</span>
+  <a href="index.html" title="Pendulum Lab">Pendulum Lab</a>
+</nav>
+<main>
+<h1 id="pendulum-active-lab">Pendulum Active Lab</h1>
+<p>This rig runs its own physics experiments. A webcam watches a pendulum hanging from a servo-driven arm. The system then:</p>
+<ol>
+<li><strong>estimates</strong> the pendulum's state despite camera latency;</li>
+<li><strong>chooses</strong> which excitation to apply next, so that it identifies the system's physics in the least experiment time;</li>
+<li><strong>uses</strong> the identified model for feedback control of the swing amplitude.</li>
+</ol>
+<p>Each claim is checked against an independent reference, and the gap between simulation and reality is measured, not assumed.</p>
+<blockquote>
+<p><strong>Status (2026-09-29): hardware experiments complete.</strong> Latest hardware results are in <a href="results/e5_hardware.html">docs/results/e5_hardware.md</a>; the full history is in <a href="engineering_log.html">docs/engineering_log.md</a>.</p>
+<ul>
+<li><strong>Closed-loop amplitude control on hardware:</strong> R-C1 met on <strong>19/19 trials</strong> at 15°, 25° and 35°, with one frozen configuration (95% CI 82–100%).
+<ul>
+<li>The swing enters and stays within ±2° of the target in 4–12 s.</li>
+<li>The camera sees the swing about 150 ms late (a Sony α7 IV over USB), and the controller compensates.</li>
+</ul>
+</li>
+<li><strong>Identification on hardware:</strong> 26° and 36° chirps fitted jointly. κ = 4.610 ± 0.002 m⁻¹, so the small-swing period is 0.934 s; an independent light gate measures 0.933 s.</li>
+<li><strong>H2 on hardware, supported:</strong> modelling the servo and compensating the latency cuts the amplitude error by <strong>95%</strong> (0.57° against 12.0°, 7 interleaved pairs, p = 0.016). Without it the controller never reached a target.</li>
+<li><strong>H1 on hardware, not supported as pre-registered:</strong> self-chosen (D-optimal) experiments reached near-best held-out prediction in a median of 10 s, against 15 s for a chirp. They were faster in 5 of 6 pairs, but the target was 2×.</li>
+<li><strong>H3, not supported:</strong> viscous and quadratic damping are indistinguishable (16 runs, p = 0.43).</li>
+<li><strong>Sensor validation:</strong> the camera and an independent light gate agree on the swing period within 0.1% (R-S4). The static-angle test failed against a hand-held reference (R-S3, 1.42°).</li>
+<li><strong>Full technical report:</strong> <a href="report.html">docs/report.md</a>.</li>
+<li><strong>Camera latency go/no-go (R-S5): fails as measured</strong> (median 151–164 ms against 150 ms). Reported, not moved; the control results above were obtained anyway.</li>
+<li><strong>Simulation:</strong>
+<ul>
+<li>E2: D-optimal design reaches within 10% of the noise floor in a median of 5 s, against 15 s for a chirp.</li>
+<li>The v1.0 wording of H1 and R-I1 is not supported. These criteria were revised in requirements v1.1, and the revision is labelled as post hoc.</li>
+<li>H2 (servo/latency model) is supported in simulation.</li>
+</ul>
+</li>
+<li>89 tests. Requirements, hypotheses and the go/no-go gate: <a href="requirements.html">docs/requirements.md</a>.</li>
+</ul>
+</blockquote>
+<p><img src="figures/e5_hw_amplitude.png" alt="Hardware amplitude control" /></p>
+<p><img src="figures/e2_nrmse_vs_time.png" alt="Held-out prediction error vs experiment time" /></p>
+<h2 id="architecture">Architecture</h2>
+<pre><code> Laptop (Python) ───────────────────────────────────────────────────────────┐
+  MarkerSensor ─► EKF + latency ─► Controller ─► Actuator                   │
+  (webcam +       compensation     (energy /     (serial → board → servo)   │
+   perception)         │           damping)                                 │
+                       ▼                                                    │
+        Identification (grey-box fit, posterior, damping-law selection)     │
+                       ▼                                                    │
+        Experiment designer (Bayesian D-optimal, safety-constrained)        │
+  RunLogger: every signal + config + seed + git SHA                         │
+  SimWorld implements the same Clock / Actuator / MarkerSensor protocols ───┘
+</code></pre>
+<p><code>src/pal/interfaces.py</code> defines the hardware abstraction. The simulator (<code>pal.sim.world.SimWorld</code>) and the physical rig implement the same protocols, so estimation, design and control code runs unchanged on both.</p>
+<h2 id="model">Model</h2>
+<p>These equations are summarised from the module docstring of <code>src/pal/sim/dynamics.py</code>.</p>
+<p>Pendulum:</p>
+<pre><code>theta_ddot = -kappa((g + a_y) sin theta + a_x cos theta)
+             - beta theta_dot - mu tanh(theta_dot/eps) - eta theta_dot |theta_dot|
+</code></pre>
+<ul>
+<li>(a_x, a_y) is the acceleration of the pivot at the tip of the servo arm.</li>
+<li>kappa = 1/L_eq.</li>
+</ul>
+<p>Servo: a second-order position loop with rate limit, acceleration limit and dead time.</p>
+<h2 id="quickstart">Quickstart</h2>
+<pre><code class="language-bash">python -m venv .venv
+.venv/Scripts/python -m pip install -e &quot;.[dev,fast,analysis,hw]&quot;  # Windows; .venv/bin/python elsewhere
+.venv/Scripts/python -m pytest                                     # all tests, no hardware needed
+.venv/Scripts/python experiments/run_sim.py --excitation chirp --duration 30
+</code></pre>
+<p>Runs are written to <code>runs/&lt;timestamp&gt;_&lt;name&gt;/</code>. Each contains <code>meta.json</code> (config, seed, commit, dirty flag), one CSV per stream, and <code>events.jsonl</code>. Load a run with <code>pal.logging.load_run(path)</code>.</p>
+<h2 id="running-the-experiments">Running the experiments</h2>
+<p><strong>Simulation</strong> (no hardware):</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Command</th>
+<th>What it does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>python experiments/e2_sim_campaign.py --seeds 20 --workers 10</code></td>
+<td>E2: free decay / chirp / random / D-optimal on 3 parameter sets, with a fit after every 5 s segment. Writes <code>results.csv</code> and <code>summary.txt</code> (≈ 12 min on 10 cores).</td>
+</tr>
+<tr>
+<td><code>python experiments/e5_control.py --seeds 5 --workers 10</code></td>
+<td>E5 in simulation: 4 controllers × 15/25/35° targets, including the H2 ablation.</td>
+</tr>
+<tr>
+<td><code>python analysis/stats.py runs/&lt;stamp&gt;_e2_sim_campaign</code></td>
+<td>Re-summarise a campaign (H1, R-I1, R-I2, R-I3).</td>
+</tr>
+<tr>
+<td><code>python analysis/figures.py</code></td>
+<td>Regenerate the report figures from the latest E2/E5 runs into <code>docs/figures/</code>.</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Hardware</strong>, in this order. Every script also runs with <code>--fake</code>, against a simulated rig (a fake board, rendered camera frames, a simulated pendulum):</p>
+<ol>
+<li>Flash <code>firmware/rig</code> (see <code>firmware/README.md</code>) and set the COM port in <code>configs/rig.yaml</code>.</li>
+<li><code>python experiments/e0_camera.py --duration 60</code>: frame rate, exposure and marker detection (R-S1, R-S2). Tune the HSV boxes in <code>rig.yaml</code> from the saved frames.</li>
+<li><code>python experiments/calibrate_rig.py --rest-wait 35 --write</code>: servo axis, image scale, camera roll and servo trim, written to <code>configs/rig_calibration.yaml</code>. It also stores the servo's power-up home on the board.</li>
+<li><code>python experiments/e1c_latency.py --toggles 200</code>: latency (go/no-go) and clock offset (R-S6). Put the printed <code>capture_latency</code> into <code>rig.yaml</code>.</li>
+<li><code>python experiments/e3_identify.py [--also runs/&lt;earlier e3&gt;]</code>: chirp identification on the rig; writes <code>params.yaml</code>.</li>
+<li><code>python experiments/e1a_static_angle.py</code> (R-S3, protractor). Then <code>python experiments/check_gate.py --params &lt;params.yaml&gt; --write</code> followed by <code>python experiments/e1b_period.py --pump &lt;params.yaml&gt;</code> (R-S4, light gate, hands-free).</li>
+<li><code>python experiments/e5_control.py --hardware --params &lt;params.yaml&gt; --repeats 3</code> (R-C1, R-C2; add <code>--controllers energy_identified energy_naive</code> for H2).</li>
+<li><code>python analysis/hw_results.py</code>: rebuilds <code>docs/results/</code> and the hardware figure from all runs.</li>
+</ol>
+<p><strong>Every session:</strong> <code>python experiments/check_calibration.py</code> first; recalibrate only if it fails. The camera may have moved or re-zoomed. See the session routine in <code>docs/test_plan.md</code>.</p>
+<h2 id="repository-layout">Repository layout</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Path</th>
+<th>Contents</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>src/pal/sim/</code></td>
+<td>Dynamics, plant (command history, dead time), camera model, SimWorld</td>
+</tr>
+<tr>
+<td><code>src/pal/identification/</code></td>
+<td>Records, batched simulation (numba/NumPy), windowed fit with priors, held-out NRMSE</td>
+</tr>
+<tr>
+<td><code>src/pal/design/</code></td>
+<td>Excitation library, Bayesian D-optimal selection, safety constraints, sessions</td>
+</tr>
+<tr>
+<td><code>src/pal/estimation/</code>, <code>src/pal/control/</code></td>
+<td>EKF with delayed frames; energy-shaping and PID amplitude control; closed-loop runner with the safety stop</td>
+</tr>
+<tr>
+<td><code>src/pal/perception/</code></td>
+<td>Marker detection, angles from markers, calibration</td>
+</tr>
+<tr>
+<td><code>src/pal/hw/</code></td>
+<td>Serial link with clock sync, servo mapping, camera thread, HardwareRig, fakes</td>
+</tr>
+<tr>
+<td><code>src/pal/validation.py</code>, <code>src/pal/stats.py</code></td>
+<td>Analysis for E1a–E1c and E5; bootstrap CIs and Wilcoxon tests</td>
+</tr>
+<tr>
+<td><code>analysis/</code></td>
+<td>Summaries and figures regenerated from <code>runs/</code> (R-R2); <code>hw_results.py</code> builds the hardware report</td>
+</tr>
+<tr>
+<td><code>docs/results/</code></td>
+<td>Committed hardware results (generated; <code>runs/</code> itself is not committed)</td>
+</tr>
+<tr>
+<td><code>src/pal/logging/</code></td>
+<td>Run logger and loader</td>
+</tr>
+<tr>
+<td><code>src/pal/excitation.py</code></td>
+<td>Excitation signals (sine, chirp, multisine, hold)</td>
+</tr>
+<tr>
+<td><code>configs/</code></td>
+<td>Simulator and hardware parameters</td>
+</tr>
+<tr>
+<td><code>experiments/</code></td>
+<td>Runnable experiment scripts</td>
+</tr>
+<tr>
+<td><code>tests/</code></td>
+<td>Physics, identification, design, serial, camera, estimation and control tests</td>
+</tr>
+<tr>
+<td><code>firmware/</code></td>
+<td>Rig firmware (protocol v1) and the servo test sketch</td>
+</tr>
+<tr>
+<td><code>docs/</code></td>
+<td>Requirements, test plan, engineering log</td>
+</tr>
+<tr>
+<td><code>docs/hardware_setup.md</code></td>
+<td><strong>Replication guide</strong>: parts, servo basics, mechanical build, wiring, camera, acceptance checks</td>
+</tr>
+<tr>
+<td><code>docs/rig_setup.html</code></td>
+<td>Interactive 3D setup guide (Three.js): build steps, wiring, and the webcam's-eye framing check</td>
+</tr>
+</tbody>
+</table></div>
+</main>
+<footer>
+  <p>Pendulum Lab &middot; Yagyaansh Khaneja &middot; 2026. Every number on these pages comes from a logged run.
+  The source code is in a private repository.</p>
+  <p><a href="index.html">Overview</a> &middot; <a href="twin.html">3D replay</a> &middot;
+  <a href="report.html">Technical report</a> &middot; <a href="report.pdf">PDF</a></p>
+</footer>
+</body>
+</html>

@@ -1,0 +1,865 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="This guide explains how to build the pendulum rig from scratch.">
+<meta name="author" content="Yagyaansh Khaneja">
+<link rel="icon" type="image/x-icon" href="../../assets/images/art.svg">
+<title>Hardware Setup and Replication Guide | Pendulum Lab | Yagyaansh Khaneja</title>
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+<link rel="stylesheet" href="site.css">
+</head>
+<body class="doc">
+<nav class="top" aria-label="Breadcrumb">
+  <a href="../../index.html" title="Yagyaansh Khaneja">yagyaansh.com</a><span class="crumb" aria-hidden="true">/</span>
+  <a href="../../projects.html" title="Projects">Projects</a><span class="crumb" aria-hidden="true">/</span>
+  <a href="index.html" title="Pendulum Lab">Pendulum Lab</a>
+</nav>
+<main>
+<h1 id="hardware-setup-and-replication-guide">Hardware Setup and Replication Guide</h1>
+<p>This guide explains how to build the pendulum rig from scratch.</p>
+<ul>
+<li><strong>3D companion:</strong> <a href="rig_setup.html"><code>rig_setup.html</code></a>. Open it in a browser to orbit the rig, animate it, and see the planned webcam framing.</li>
+<li><strong>Nominal dimensions:</strong> <span class="private" title="File in the private source repository"><code>../configs/sim.yaml</code></span>. Replace them with your measured values (§9) once the rig is built.</li>
+</ul>
+<blockquote>
+<p><strong>Principle:</strong> the rig must be <em>rigid everywhere except the pivot</em>. The pivot must turn freely, with almost no play. Everything else is validated against independent references (tests E0–E1 in <a href="test_plan.html"><code>test_plan.md</code></a>) before any experiment is trusted.</p>
+</blockquote>
+<hr />
+<h2 id="1-parts">1. Parts</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Part</th>
+<th>Used here</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Microcontroller</td>
+<td>ELEGOO UNO R3 (any 5 V Arduino works)</td>
+<td>The laptop does all computation. The board only drives the servo and reads sensors.</td>
+</tr>
+<tr>
+<td>Servo</td>
+<td>SG90 micro servo, with its horns and screws</td>
+<td>Plastic gears; weak (≈ 1.8 kg·cm).</td>
+</tr>
+<tr>
+<td>Arm</td>
+<td>A rigid, light strip about 7 cm long: a popsicle stick, or a small plastic tool with any sliding parts locked</td>
+<td>Aim for under about 20 g.</td>
+</tr>
+<tr>
+<td>Pendulum rod</td>
+<td>A 30 cm steel ruler, using its hanging hole as the pivot hole</td>
+<td>Straight, stiff, with known dimensions. A wooden stick works too.</td>
+</tr>
+<tr>
+<td>Pivot axle</td>
+<td>A smooth, unthreaded bolt or nail <strong>0.2–0.5 mm narrower than the rod's hole</strong>, plus washers or nuts</td>
+<td><strong>Not a pen refill</strong>: it is too flexible and too thin (see §3.4).</td>
+</tr>
+<tr>
+<td>Bob (optional)</td>
+<td>1–3 steel nuts taped near the bottom of the rod</td>
+<td>Slows the swing slightly and gives a place for the light-gate vane.</td>
+</tr>
+<tr>
+<td>Markers</td>
+<td>Matte paper circles: <strong>green ≈ 1.5 cm</strong> (pivot) and <strong>magenta ≈ 2.5 cm</strong> (rod)</td>
+<td>They must be matte; gloss causes glare.</td>
+</tr>
+<tr>
+<td>Backdrop</td>
+<td>Matte black card, about 90 × 60 cm</td>
+<td>Taped to the table edge, hanging behind the pendulum.</td>
+</tr>
+<tr>
+<td>Protractor</td>
+<td><a href="print/protractor_R250_A4x2.pdf"><code>print/protractor_R250_A4x2.pdf</code></a>, printed on 2 × A4</td>
+<td>Only for calibration test E1a.</td>
+</tr>
+<tr>
+<td>Light gate</td>
+<td>White LED + 220 Ω; photoresistor + 10 kΩ; cardboard vane about 5 × 5 cm</td>
+<td>Timing reference for test E1b.</td>
+</tr>
+<tr>
+<td>Latency LED</td>
+<td>Red LED + 220 Ω</td>
+<td>Camera-delay test E1c.</td>
+</tr>
+<tr>
+<td>Servo power</td>
+<td><strong>Kit breadboard power module + the kit's 9 V 1 A adapter</strong> (used here). Alternative: a 5 V ≥ 2 A phone charger with a cut USB cable, plus a breadboard</td>
+<td>The module has its own 5 V regulator, separate from the UNO's. No breadboard or cable cutting is needed (§6).</td>
+</tr>
+<tr>
+<td>Camera</td>
+<td>Laptop webcam: 640×480 at 30 fps, manual exposure, fixed focus</td>
+<td>Measured on 2026-09-26; see <code>engineering_log.md</code>.</td>
+</tr>
+<tr>
+<td>Lighting</td>
+<td>A bright, steady (DC) LED desk lamp</td>
+<td>Needed for a 4–8 ms exposure.</td>
+</tr>
+<tr>
+<td>Mounting</td>
+<td>A wooden block, a clamp or weights, tape, glue, a stool or books for the laptop</td>
+<td></td>
+</tr>
+</tbody>
+</table></div>
+<blockquote>
+<p><strong>Don't confuse the servo with the stepper motor.</strong> Arduino kits often include both.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th></th>
+<th><strong>SG90 servo (used here)</strong></th>
+<th>28BYJ-48 stepper (not used)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Appearance</td>
+<td>Small <strong>blue plastic box</strong>, about 23 × 12 × 22 mm, labelled &quot;SG90 9g&quot;, with two mounting ears and a white toothed shaft</td>
+<td><strong>Silver metal can</strong> with a blue cap, labelled &quot;STEP MOTOR 28BYJ-48 5V DC&quot;</td>
+</tr>
+<tr>
+<td>Wires</td>
+<td><strong>3</strong>: brown, red, orange</td>
+<td><strong>5</strong>: blue, pink, yellow, orange, red, with a white 5-pin plug</td>
+</tr>
+<tr>
+<td>Driver</td>
+<td>None: the signal goes straight to an Arduino pin</td>
+<td>Needs a ULN2003 driver board</td>
+</tr>
+<tr>
+<td>Speed</td>
+<td>≈ 60° in 0.1 s</td>
+<td>≈ 10–15 rpm maximum (estimate). Too slow to excite the pendulum: ±20° at ~1 Hz needs ≳ 21 rpm at peak</td>
+</tr>
+</tbody>
+</table></div>
+</blockquote>
+<hr />
+<h2 id="2-the-servo-what-it-is-and-how-it-is-commanded">2. The servo: what it is and how it is commanded</h2>
+<p>An SG90 is a <strong>position-controlled</strong> motor. Inside it are:</p>
+<ul>
+<li>a DC motor;</li>
+<li>a plastic gearbox;</li>
+<li>a <strong>potentiometer</strong> that measures the output angle;</li>
+<li>a small controller that drives the motor until the measured angle equals the commanded angle.</li>
+</ul>
+<p>The simulator models this internal loop as a second-order system with a rate limit (≈ 60° per 0.1 s) and a dead time (see <code>src/pal/sim/dynamics.py</code>).</p>
+<p><strong>Commanding it:</strong> send a pulse on the signal wire 50 times per second. The <strong>pulse width sets the angle</strong>:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Pulse width</th>
+<th>Angle (approximate)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1000 µs</td>
+<td>−45°</td>
+</tr>
+<tr>
+<td><strong>1500 µs</strong></td>
+<td><strong>centre</strong></td>
+</tr>
+<tr>
+<td>2000 µs</td>
+<td>+45°</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Wires:</strong></p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Wire</th>
+<th>Meaning</th>
+<th>Connect to</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Brown</td>
+<td>Ground (−)</td>
+<td>Ground rail, shared with the UNO</td>
+</tr>
+<tr>
+<td>Red</td>
+<td>+4.8–6 V</td>
+<td>External 5 V rail (§6)</td>
+</tr>
+<tr>
+<td>Orange</td>
+<td>Signal</td>
+<td>UNO <strong>D9</strong></td>
+</tr>
+</tbody>
+</table></div>
+<blockquote>
+<p><strong>Never twist the servo shaft by hand</strong>, because it strips the plastic gears. Keep commands within 1000–2000 µs while testing. Pushing a servo against its end stop makes it buzz and heat up.</p>
+</blockquote>
+<hr />
+<h2 id="3-mechanical-build">3. Mechanical build</h2>
+<h3 id="31-bare-servo-test-and-centring-nothing-attached">3.1 Bare servo test and centring (nothing attached)</h3>
+<ol>
+<li>Install <strong>Arduino IDE 2</strong>. Plug in the UNO and select <strong>Tools → Board → Arduino Uno</strong> and its <strong>Port</strong>. If no port appears, install the CH340 USB driver.</li>
+<li>Wire the bare servo <strong>directly to the UNO</strong>: brown → GND, red → 5V, orange → D9. Male-male jumpers push into the servo's connector.
+<ul>
+<li><em>This is the only time the servo may be powered from the UNO.</em> An unloaded SG90 draws little current, and ELEGOO's own servo lesson does the same. Once anything is attached, use external power (§6).</li>
+</ul>
+</li>
+<li>Upload <span class="private" title="File in the private source repository"><code>../firmware/servo_test/servo_test.ino</code></span>.</li>
+<li>Open <strong>Serial Monitor</strong> at <strong>115200 baud</strong>. Type <code>1000</code>, <code>2000</code>, then <code>1500</code>: the shaft should swing about ±45° and return to centre. <strong>Leave it at 1500.</strong></li>
+</ol>
+<h3 id="32-horn-pointing-straight-down">3.2 Horn, pointing straight down</h3>
+<ol>
+<li>With the servo holding <strong>1500 µs</strong>, push the <strong>single-arm horn</strong> onto the shaft, pointing <strong>straight down</strong>.</li>
+<li>The shaft is toothed, so pick the tooth position closest to vertical. A few degrees of offset is corrected in software.</li>
+<li>Fix the horn with the tiny screw into the shaft.</li>
+</ol>
+<h3 id="33-arm-and-servo-mounting">3.3 Arm and servo mounting</h3>
+<ol>
+<li>Fix the arm to the horn with screws through the horn holes, plus glue if needed. <strong>Any sliding or hinged part of the arm must be locked.</strong></li>
+<li>Screw the servo by its two ear tabs to the <strong>front face of a wooden block</strong>, with the <strong>shaft pointing at the camera</strong>.</li>
+<li>Clamp or weigh the block down <strong>at the table edge</strong>, so the arm and pendulum hang just in front of the edge.</li>
+<li>Cover or remove any sharp points on the arm.</li>
+</ol>
+<h3 id="34-pivot-axle-the-critical-joint">3.4 Pivot axle: the critical joint</h3>
+<p>The axle is fixed in the arm, and the rod turns on the axle.</p>
+<pre><code>Side view (backdrop on the left, camera on the right)
+
+ backdrop              arm (fixed to the servo horn)
+    │                   │   washer
+    │                   │   │   rod (hole 0.2-0.5 mm larger than the axle)
+    │                   │   │   │   axle head / nut + GREEN marker
+    │   axle tip ───────█───▪───█───●   ───►  towards the camera
+    │  (taped over)     │       │
+    │                   │       │   rod hangs down and swings left-right,
+    │   ~3 cm gap       │       │   in the plane facing the camera
+</code></pre>
+<ol>
+<li><strong>Position:</strong> the axle goes directly below the servo shaft when the arm points down, at the arm length (nominally 7 cm).</li>
+<li><strong>Direction:</strong> horizontal, <strong>square to the arm</strong>, pointing straight at the camera. A tilted axle tilts the swing plane.</li>
+<li><strong>Fit in the rod:</strong> choose an axle <strong>0.2–0.5 mm narrower</strong> than the rod's hole. Measure the hole first.
+<ul>
+<li>The reason: the servo accelerates the pivot sideways at up to ~2–3 g (estimate), so a loose hole makes the rod rattle.</li>
+<li>The model assumes a rigid pivot. It can identify friction, but not looseness.</li>
+</ul>
+</li>
+<li><strong>Axial room:</strong> about <strong>1 mm</strong> of sliding room between the washer and the head. More lets the rod wobble toward the camera; less makes it rub.</li>
+<li><strong>Tip:</strong> tape over the axle tip behind the arm, and check that it cannot touch the backdrop.</li>
+<li><strong>Marker:</strong> put the <strong>green marker</strong> on the axle head, so the camera sees the true pivot position (servo gear play included).</li>
+</ol>
+<h3 id="35-which-joints-may-move">3.5 Which joints may move</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Joint</th>
+<th>Allowed motion</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Servo horn ↔ arm</td>
+<td><strong>None:</strong> screwed and glued</td>
+</tr>
+<tr>
+<td>Arm ↔ axle</td>
+<td><strong>None:</strong> fixed tight, no wiggle or spin</td>
+</tr>
+<tr>
+<td>Axle ↔ rod</td>
+<td><strong>Free rotation, almost no play</strong></td>
+</tr>
+<tr>
+<td>Block ↔ table</td>
+<td><strong>None:</strong> clamped or weighted</td>
+</tr>
+<tr>
+<td>Servo's internal gears</td>
+<td>Some play is unavoidable. It is measured through the green marker.</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="36-rod-bob-and-markers">3.6 Rod, bob and markers</h3>
+<ol>
+<li>Hang the rod on the axle.</li>
+<li><strong>Magenta marker:</strong> put it near the bottom of the rod. With a 30 cm ruler, that is about <strong>25–28 cm from the pivot</strong>. Record the exact distance (§9).</li>
+<li><strong>Optional bob:</strong> tape 1–3 nuts near the bottom.</li>
+<li><strong>Light-gate vane:</strong> tape a <strong>5 × 5 cm cardboard vane</strong> at the bottom, so it passes through the light-gate beam at the lowest point of the swing.</li>
+<li><strong>Optional second pivot hole:</strong> drill one 5 cm lower, for the &quot;shortened pendulum&quot; perturbation test (E6).</li>
+</ol>
+<h3 id="37-backdrop">3.7 Backdrop</h3>
+<ul>
+<li>Tape the matte black card to the table edge, hanging behind the pendulum, <strong>about 3–4 cm behind the swing plane</strong>. The rod must never touch it.</li>
+<li><strong>Run every wire along the backdrop edges, outside the swing area.</strong> Wires behind the pendulum end up in the middle of the camera frame.</li>
+</ul>
+<hr />
+<h2 id="4-protractor-calibration-test-e1a-only">4. Protractor (calibration test E1a only)</h2>
+<ol>
+<li>Print <a href="print/protractor_R250_A4x2.pdf"><code>print/protractor_R250_A4x2.pdf</code></a> at <strong>actual size on A4</strong> (not &quot;fit to page&quot;). If regeneration is needed, run <code>python scripts/make_protractor.py</code>.</li>
+<li><strong>Check scaling:</strong> on each page, the <strong>horizontal and vertical check bars must be equal in length</strong>.
+<ul>
+<li>Exactly 100 mm is ideal but not required, because angles survive uniform scaling. (A4 printed on a printer set to Letter comes out at about 95% and is still fine.)</li>
+<li>Unequal bars mean the print is distorted. For example, 95% × 100% turns the 45° line into about 43.5°. Reprint on A4.</li>
+</ul>
+</li>
+<li><strong>Assemble:</strong>
+<ol>
+<li>Tape page 1 (LEFT) down, ideally on a window.</li>
+<li>Cut page 2 (RIGHT) along its dashed line.</li>
+<li>Lay page 2 over page 1 so the <strong>thick 0° line, the top crosshair and the bottom cross</strong> align. Holding the pages against daylight makes this easy.</li>
+<li>Tape the seam. The arc must continue across the seam without a step.</li>
+</ol>
+</li>
+<li><strong>Mount:</strong> put the <strong>crosshair directly behind the pivot axle</strong>, and rotate the sheet until the <strong>0° line runs along the rod hanging at rest</strong>.</li>
+</ol>
+<p>The protractor covers ±45° at a 250 mm radius. 1 mm of alignment error is ≈ 0.23°, well inside the 1.0° accuracy requirement (R-S3).</p>
+<hr />
+<h2 id="5-light-gate-and-latency-led">5. Light gate and latency LED</h2>
+<ul>
+<li>
+<p><strong>Light gate:</strong></p>
+<ul>
+<li>The white LED sits on the backdrop at vane height, shining towards the camera.</li>
+<li>The photoresistor sits on a stand (books or cardboard) about 12 cm in front, facing the LED.</li>
+<li>The vane cuts the beam at the bottom of the swing.</li>
+<li>Photoresistors respond in tens of ms, so the gate is used for the <strong>period</strong> (test E1b), where constant delays cancel.</li>
+</ul>
+</li>
+<li>
+<p><strong>Latency LED:</strong> the red LED goes in the <strong>top-right corner of the backdrop, inside the camera frame</strong>. The board toggles it and the host measures when the camera sees it (E1c).</p>
+</li>
+<li>
+<p><strong>Shield the photoresistor.</strong> It is very sensitive: in a dim room, the red LED's glow 5–7 cm away changed the reading visibly. So:</p>
+<ul>
+<li>keep the photoresistor close to and facing its white LED;</li>
+<li>put a short paper or black tube (about 1–2 cm) around it as a blinker;</li>
+<li>keep the latency LED and the lamp out of its line of sight.</li>
+</ul>
+</li>
+<li>
+<p><strong>Measured response (2026-09-27, photoresistor on the + side).</strong> Median A0 over 8 s each:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Light</th>
+<th>A0</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Room light</td>
+<td>657</td>
+</tr>
+<tr>
+<td>Phone torch</td>
+<td>941</td>
+</tr>
+<tr>
+<td>Fingertip covering</td>
+<td>141</td>
+</tr>
+</tbody>
+</table></div>
+<p>Covered vs lit differ by about 800 counts; the firmware threshold goes between them, with hysteresis.</p>
+</li>
+<li>
+<p><strong>As built (2026-09-28).</strong> A simpler layout than the one above also works:</p>
+<ul>
+<li>the white LED is taped at the bottom edge of the protractor sheet, about 28 cm below the pivot, near the ruler's tip;</li>
+<li>the photoresistor is 1–3 cm in front of it, <strong>its face pointing at the LED</strong>, with the ruler's path in the gap;</li>
+<li>no vane: the ruler itself (about 2.5 cm wide) blocks the beam.</li>
+</ul>
+<p><strong>Tape the LED down.</strong> An LED hanging by its legs sways, and the reading changes with it.</p>
+</li>
+<li>
+<p><strong>Gate test with a real swing (2026-09-28).</strong> Recorded by polling A0 at about 244 Hz over serial:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Condition</th>
+<th>A0</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Beam clear (rod held aside)</td>
+<td>851 ± 2</td>
+</tr>
+<tr>
+<td>Ruler resting in the beam</td>
+<td>≈ 245 (drifts 160–250 with room light and people moving)</td>
+</tr>
+<tr>
+<td>Fast pass, released from about 30°</td>
+<td>Dips only to 540–580, lasting 16–25 ms</td>
+</tr>
+<tr>
+<td>Slow pass, near the end of the swing</td>
+<td>Dips to 300–400, lasting 50–240 ms</td>
+</tr>
+</tbody>
+</table></div>
+<ul>
+<li>The photoresistor is too slow to settle during a fast pass, so <strong>the thresholds must sit just below the clear level</strong>: 720 blocked / 790 clear in <span class="private" title="File in the private source repository"><code>configs/rig.yaml</code></span>.</li>
+<li>The midpoint thresholds (300/450, or the 2/3 point that <code>C</code> calibration sets) catch almost nothing.</li>
+<li>All 29 passes were detected at 720/790. The full period from every other passage was <strong>0.933 ± 0.004 s</strong>, slightly longer at larger amplitude, as expected.</li>
+<li>If a future setup gives shallower dips, add the 5 × 5 cm vane: a wider blocker gives the photoresistor more time.</li>
+</ul>
+</li>
+</ul>
+<hr />
+<h2 id="6-electrical-wiring">6. Electrical wiring</h2>
+<p>The servo gets <strong>its own 5 V supply</strong>. The UNO is powered by USB (logic and data only). <strong>Only the grounds are joined.</strong></p>
+<blockquote>
+<p><strong>Why this matters (measured on 2026-09-26/27).</strong> With the servo on the UNO's 5V pin, every servo move pulled the UNO's supply from 5.14 V down to <strong>4.41 V</strong>, even for 1° steps and even with nothing attached. The cause is the motor's start-up current spike. With the servo on the separate module below, the dip fell to <strong>0.02 V</strong> (5.09 V → 5.07 V), about 30× smaller.</p>
+</blockquote>
+<h3 id="61-servo-power-kit-breadboard-power-module-used-here">6.1 Servo power: kit breadboard power module (used here)</h3>
+<p>The ELEGOO breadboard power module is a small black board with:</p>
+<ul>
+<li>a barrel socket (&quot;Vin &lt; 12V&quot;), a USB-A socket, a grey push-button and a green LED;</li>
+<li>two jumper blocks marked &quot;5V VCC 3.3&quot;;</li>
+<li>a <strong>2 × 4 pin block in the middle</strong>. One row is marked <strong>GND</strong>. The other row sits beside the <strong>&quot;5V&quot;</strong> and <strong>&quot;3.3V&quot;</strong> labels, with a bracket under each pair.</li>
+</ul>
+<p>The middle block's outputs are <strong>fixed</strong>: they do not depend on the jumper caps, and no breadboard is needed.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>From</th>
+<th>To</th>
+<th>Jumper type</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Kit <strong>9 V 1 A adapter</strong></td>
+<td>Module barrel socket</td>
+<td>—</td>
+</tr>
+<tr>
+<td>Servo <strong>red</strong> (+)</td>
+<td>Module middle block, a pin under the <strong>&quot;5V&quot;</strong> bracket (<strong>not 3.3V</strong>)</td>
+<td>Female end onto the pin (the servo extension ribbon's female end fits directly)</td>
+</tr>
+<tr>
+<td>Servo <strong>brown</strong> (−)</td>
+<td>Module middle block, <strong>GND</strong> row</td>
+<td>Female end onto the pin</td>
+</tr>
+<tr>
+<td>UNO <strong>GND</strong></td>
+<td>Module middle block, <strong>GND</strong> row (another pin)</td>
+<td><strong>Male-to-female</strong></td>
+</tr>
+<tr>
+<td>Servo <strong>orange</strong> (signal)</td>
+<td>UNO <strong>~9</strong></td>
+<td>Male-to-male (from the ribbon's female end)</td>
+</tr>
+<tr>
+<td>UNO <strong>5V</strong></td>
+<td><strong>Nothing</strong></td>
+<td>—</td>
+</tr>
+<tr>
+<td>UNO USB</td>
+<td>Laptop</td>
+<td>—</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Power-up order:</strong></p>
+<ol>
+<li>Plug the adapter into the module and press the grey button. The green LED lights.</li>
+<li>Then plug in the UNO's USB.</li>
+</ol>
+<p><strong>Check before the first power-up:</strong> red is under <strong>5V</strong>, and brown and the UNO's ground are on the <strong>GND</strong> row. Reversed polarity destroys the servo instantly.</p>
+<p><strong>Regulator heat:</strong> after a few minutes of servo motion, touch the module's two small 3-legged black chips. Warm is fine; too hot to hold means stop.</p>
+<h3 id="62-sensors-and-indicator-leds-breadboard-hole-by-hole">6.2 Sensors and indicator LEDs (breadboard, hole by hole)</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Signal</th>
+<th>Circuit</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Photoresistor</td>
+<td>UNO 5V → photoresistor → <strong>A0</strong> → 10 kΩ → UNO GND</td>
+</tr>
+<tr>
+<td>Gate LED (white)</td>
+<td>UNO <strong>D7</strong> → 220 Ω → LED long leg; short leg → GND</td>
+</tr>
+<tr>
+<td>Latency LED (red)</td>
+<td>UNO <strong>D8</strong> → 220 Ω → LED long leg; short leg → GND</td>
+</tr>
+</tbody>
+</table></div>
+<p>These run from the UNO's own 5V, which is clean because the servo is not on it. <strong>Do not put the servo power module on this breadboard:</strong> it would join the servo's supply to the sensors' supply.</p>
+<p><strong>Breadboard orientation:</strong></p>
+<ul>
+<li>Holes are named by column letter (a–j) and row number (1–63).</li>
+<li>Holes a–e of one row are connected to each other.</li>
+<li>Beside column a there are <strong>two long columns of holes</strong>, and each is connected along its whole length. Between them and the board's edge run a <strong>red line</strong> and a <strong>blue line</strong>.
+<ul>
+<li>The <strong>+ strip</strong> is the hole column <strong>directly beside the red line</strong>, usually the outer one.</li>
+<li>The <strong>− strip</strong> is the hole column <strong>directly beside the blue line</strong>, next to column a.</li>
+<li>Check the red/blue lines on your board rather than assuming the order.</li>
+</ul>
+</li>
+<li><strong>Electrical check (recommended):</strong> with <code>io_test</code> running, temporarily plug the breadboard end of the A0 jumper into the strip you believe is <strong>+</strong>. It must read a steady <strong>1023</strong>; on the − strip it must read about <strong>0</strong>. This caught a wrongly powered strip during bring-up.</li>
+</ul>
+<p><strong>UNO pins used:</strong></p>
+<ul>
+<li>5V and the <strong>free</strong> GND on the power header (the other GND carries the ground wire to the power module);</li>
+<li>A0 on the analog header;</li>
+<li>D7 and D8 on the digital header.</li>
+</ul>
+<p><strong>Steps (USB and servo power off):</strong></p>
+<ol>
+<li>Male-to-male jumper: <strong>UNO 5V → + strip</strong> (near row 5).</li>
+<li>Male-to-male jumper: <strong>UNO GND → − strip</strong> (near row 5).</li>
+<li><strong>Photoresistor:</strong> one leg into the <strong>+ strip</strong> (the column beside the <strong>red</strong> line) near row 10, the other into <strong>a10</strong>. The photoresistor itself has no polarity.</li>
+<li><strong>10 kΩ</strong> (brown–black–orange): <strong>b10 → − strip</strong> (the column beside the <strong>blue</strong> line) near row 12.
+<strong>The photoresistor and the 10 kΩ must end up on opposite strips.</strong> If both are on −, A0 reads about 0 whatever the light (this happened during bring-up).</li>
+<li>Jumper: <strong>c10 → UNO A0</strong>.</li>
+<li>Jumper: <strong>UNO D7 → a20</strong>.</li>
+<li><strong>220 Ω</strong> (red–red–brown): <strong>b20 → b24</strong>.</li>
+<li><strong>White LED:</strong> long leg <strong>c24</strong>, short leg <strong>− strip</strong> near row 24.</li>
+<li>Jumper: <strong>UNO D8 → a30</strong>.</li>
+<li><strong>220 Ω:</strong> <strong>b30 → b34</strong>.</li>
+<li><strong>Red LED:</strong> long leg <strong>c34</strong>, short leg <strong>− strip</strong> near row 34.</li>
+</ol>
+<p><strong>Count check:</strong> 5 jumpers, 3 resistors, 2 LEDs, 1 photoresistor.</p>
+<p><strong>Common questions and checks:</strong></p>
+<ul>
+<li><strong>Any hole in the same row works.</strong> a10–e10 are all the same connection, so an LED leg can go in a24 instead of c24 if its legs are short. What matters is that the LED's <strong>long leg shares a row with its resistor's far end</strong>, and <strong>not</strong> with the D7/D8 jumper's row (that would bypass the resistor).</li>
+<li><strong>A reversed LED simply stays dark.</strong> With the resistor in series it is not damaged. Flip it.</li>
+<li><strong>Photoresistor and 10 kΩ swapped between the + and − strips</strong> (still on opposite strips): this works, with an inverted reading (bright gives a low value). <strong>Both on the same strip does not work.</strong></li>
+<li><strong>The 10 kΩ, the photoresistor and the A0 jumper must share one row</strong> (row 10 here). If the resistor sits one row off, A0 reads a constant value.</li>
+<li><strong>The + strip must come from the UNO's &quot;5V&quot; pin,</strong> not RESET or IOREF, which are two and three holes above it.</li>
+</ul>
+<p><strong>Test:</strong> upload <span class="private" title="File in the private source repository"><code>../firmware/io_test/io_test.ino</code></span>.</p>
+<ul>
+<li>The white LED should be on, the red LED should blink at 1 Hz, and the A0 reading is printed at 115200 baud.</li>
+<li>Covering the photoresistor must change the reading clearly.</li>
+</ul>
+<p><strong>Final placement:</strong> extend the LEDs and the photoresistor to their positions (§5) with <strong>male-to-female</strong> jumpers. The female end goes onto the component's leg; the male end goes into the same breadboard hole the leg used.</p>
+<h3 id="63-alternative-servo-supply-phone-charger">6.3 Alternative servo supply: phone charger</h3>
+<p>If no power module is available:</p>
+<ol>
+<li>Cut a spare USB cable from a 5 V ≥ 2 A phone charger. Strip the <strong>red</strong> (+5 V) and <strong>black</strong> (GND) wires, and insulate the others.</li>
+<li><strong>Check polarity first</strong> by putting an LED with a 220 Ω resistor across the wires. It lights only when its <strong>long leg</strong> is on +5 V.</li>
+<li>Use a breadboard: charger red/black → + / − rails; servo red/brown → + / − rails; UNO GND → − rail.</li>
+<li>Put a <strong>100 µF capacitor</strong> across the rails near the servo, with its − leg on the − rail.</li>
+</ol>
+<blockquote>
+<p><strong>Never connect the UNO's 5V pin to the servo's supply</strong>, and never power the loaded servo from the UNO. Only the grounds are joined.</p>
+</blockquote>
+<hr />
+<h2 id="7-camera-and-lighting">7. Camera and lighting</h2>
+<ol>
+<li><strong>Placement:</strong> the laptop screen <strong>faces the rig</strong>, about <strong>75 cm</strong> from the pendulum plane. Raise the laptop on a stool or books so the webcam lens is about <strong>22 cm below the servo shaft</strong>.</li>
+<li><strong>Framing:</strong> the servo sits near the top of the image, and the full ±60° swing fits inside the 640×480 frame. At this distance the frame covers about 80 × 60 cm, which is <strong>8 px/cm</strong>. Use <strong>Webcam's view</strong> in <a href="rig_setup.html"><code>rig_setup.html</code></a> to compare.</li>
+<li><strong>Camera settings:</strong> manual exposure, <strong>4–8 ms</strong> (OpenCV exposure −8 to −7 on the tested webcam). Longer exposures blur the markers: at ≈ 1 m/s, 33 ms smears them ≈ 3 cm.</li>
+<li><strong>Lamp:</strong> a <strong>bright DC LED lamp</strong> above and to the front-left, at about 45°.
+<ul>
+<li>Avoid glare on the steel rod and the markers.</li>
+<li>Avoid mains-powered flickering lamps: 50 Hz mains in India flickers at 100 Hz.</li>
+<li>Lock the exposure; auto-exposure changes the frame rate.</li>
+</ul>
+</li>
+</ol>
+<h3 id="71-what-must-be-in-the-frame">7.1 What must be in the frame</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>In the frame?</th>
+<th>Item</th>
+<th>Why</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Must</strong></td>
+<td>Servo shaft and the <strong>green dot</strong> on the pivot, over the full arm travel</td>
+<td>Calibration fits a circle to the green dot to find the shaft, the pixel scale and the servo zero</td>
+</tr>
+<tr>
+<td><strong>Must</strong></td>
+<td>The <strong>pink dot</strong> over the whole swing, at least ±60°, <strong>plus about 3 cm of margin</strong></td>
+<td>A dot leaving the frame means lost measurements, exactly at the large angles that matter most</td>
+</tr>
+<tr>
+<td><strong>Must</strong></td>
+<td>The <strong>red latency LED</strong></td>
+<td>Test E1c measures the camera delay from it</td>
+</tr>
+<tr>
+<td>Optional</td>
+<td>The white gate LED and the photoresistor</td>
+<td>The board reads the gate; the camera does not need it. It may be in view (a white LED is not mistaken for a marker), but its glow must not wash over the pink dot</td>
+</tr>
+</tbody>
+</table></div>
+<ul>
+<li><strong>Size, with the arm at 7.2 cm and the pink dot at 25 cm.</strong> The pink dot reaches about ±27 cm sideways (21.7 cm from the swing, plus 5 cm from the arm at ±45°).
+<ul>
+<li>It reaches 32 cm below the shaft.</li>
+<li>So the frame should cover <strong>about 75 cm wide × 42 cm tall</strong> (16:9), with the servo shaft about 5 cm below the top edge, centred left–right.</li>
+<li>The two protractor pages together are about 42 cm wide, so they fill a little over half the frame width.</li>
+</ul>
+</li>
+<li><strong>Keep the camera square to the swing plane.</strong> The lens axis should be perpendicular to the backdrop, at about the height of the middle of the swing. Tilt makes angles read wrong.</li>
+</ul>
+<h3 id="72-as-built-sony-α7-iv-ilce-7m4-over-usb-2026-09-28">7.2 As built: Sony α7 IV (ILCE-7M4) over USB (2026-09-28)</h3>
+<p>The α7 IV streams as a standard USB webcam (&quot;USB Video Device&quot;); OpenCV opens it directly (DirectShow index 2 on this laptop, next to the built-in webcam and the OBS virtual camera). Measured: <strong>1280×720 MJPG at 30.0 fps</strong>; requests for 1080p or 60 fps were ignored, because the camera sets the stream format itself.</p>
+<p>Camera settings. Menu names are from Sony's α7 IV help guide; check them on the body.</p>
+<ol>
+<li><strong>Stream format:</strong> MENU → Setup → USB → <strong>USB Streaming → Output Resol/Frame Rate</strong> → <strong>HD (1080p) 60p</strong>, if offered. 60 fps doubles the samples per swing; tell the host to re-probe after changing it.</li>
+<li><strong>Exposure: manual (M) in movie mode, shutter 1/250 s</strong> (4 ms). This matches <code>camera.exposure: -8</code> (2⁻⁸ s ≈ 3.9 ms) in <code>configs/rig.yaml</code>, which the fit uses for mid-exposure timing. Set brightness with ISO, not the shutter.</li>
+<li><strong>Focus:</strong> manual (MF), focused on the rod.</li>
+<li><strong>SteadyShot: off.</strong> The camera is fixed, and sensor-shift stabilisation would move the image and make the markers jitter.</li>
+<li><strong>White balance:</strong> a fixed preset, not auto, so the marker colours stay put.</li>
+<li><strong>Power:</strong> streaming drains the battery. Use a charged battery, or USB-C power delivery if the laptop port supplies it. Raise the auto power-off temperature if it overheats.</li>
+<li><strong>Lighting:</strong> with a 4 ms shutter, 50 Hz mains lamps flicker at 100 Hz, and it shows as brightness changes between frames. Prefer a DC LED lamp (see step 4 above).</li>
+</ol>
+<p><strong>Session routine (lessons from 2026-09-28):</strong></p>
+<ul>
+<li><strong>Stabilisation off on a tripod: lens OSS switch OFF and SteadyShot OFF.</strong> With it on, each power-up re-centred the image by 10–30 px. Switching it off also changed the zoom by about 12%.</li>
+<li><strong>After every camera restart or touch, first check:</strong> <code>experiments/check_calibration.py</code> (about 15 s). It holds the arm vertical, waits for rest, and compares the live feed with the saved calibration: green marker position (≤ 3 px), rod length in pixels (≤ 1%, zoom), resting angle (≤ 0.3°, roll) and arm angle at 0 and ±20° (≤ 1.5°, the SG90's repeatability).</li>
+<li><strong>Only if it prints FAIL, recalibrate:</strong> <code>experiments/calibrate_rig.py --rest-wait 35 --write</code>.
+<ul>
+<li>Check the printed <code>rod/arm in the image</code> line: it should be within about 8% of the metric ratio (about 2.9). If it says CHECK, a wrong object was taken for a marker.</li>
+<li>Check that the servo trim is close to its previous value (about −71 µs). A big change means the horn or arm moved.</li>
+</ul>
+</li>
+<li><strong>Then a quick latency check:</strong> <code>experiments/e1c_latency.py --toggles 30</code>. Update <code>camera.capture_latency</code> if it moved by more than about 5 ms.</li>
+<li><strong>Heat and power:</strong> the α7 IV switched itself off twice in about 20 minutes of streaming.
+<ul>
+<li>Let it cool between long sessions.</li>
+<li>Use a full battery or external USB-C power.</li>
+<li>Set Auto Power OFF Temp. to High and the power-save start time to maximum.</li>
+<li>The control loop stops safely if frames stop (0.5 s), but the remaining trials are lost.</li>
+</ul>
+</li>
+</ul>
+<p><strong>First frame check (2026-09-28).</strong> Camera on a tripod with a telephoto zoom, about 1.5 m in front of the swing plane (measured later: §9): the long lens keeps perspective distortion small. Results:</p>
+<ul>
+<li><strong>Framing: good.</strong> The frame covers about 85 × 48 cm, at 15 px/cm. The green dot, the pink dot's ±60° swing and the red LED are all inside.</li>
+<li><strong>Both markers were detected wrong,</strong> because each colour matched something bigger:
+<ul>
+<li>the &quot;green&quot; match was the <strong>green tape roll</strong> on the desk behind (HSV 37/162/119), not the green dot (30/200/64, dark);</li>
+<li>the &quot;magenta&quot; match was a <strong>pink or purple patch below the sheet</strong>, behind the ruler's tip, not the pink dot.</li>
+<li>The pink dot measured <strong>hue 4</strong>, which is red, not magenta (140–172). That is the same hue as the red LED, the red wires and the bricks.</li>
+</ul>
+</li>
+<li><strong>The white sheet read orange</strong> (hue 16, saturation 76), so the white balance was far off and all colours were shifted warm.</li>
+</ul>
+<p><strong>Fixes, in order:</strong></p>
+<ol>
+<li>Remove anything green, pink or purple from the frame (the tape roll, the patch below the sheet).</li>
+<li>Light the rig with the LED panel from about 45° to the side. Directly beside the lens, it glints off the steel ruler.</li>
+<li><strong>Custom white balance on the white protractor sheet</strong>; the sheet should then read neutral. If that is not possible, set the panel to daylight (≈ 5600 K) and match that preset on the camera.</li>
+<li>Re-check the dot colours. If the pink still reads red (hue below 10 or above 175), re-colour it with a <strong>purple-pink or magenta</strong> pen, or retune the <code>markers:</code> HSV boxes in <code>configs/rig.yaml</code> to the measured colours with <code>experiments/e0_camera.py</code>.</li>
+</ol>
+<p><strong>After the fixes (same day).</strong> Custom white balance on the sheet and a higher ISO; the sheet now reads V ≈ 225.</p>
+<ul>
+<li><strong>Measured colours:</strong>
+<ul>
+<li>green dot: hue 31–51, S 60–120;</li>
+<li>pink sketch-pen dot: hue 0–4, S 80–110;</li>
+<li>lookalikes: steel ruler hue 13–18, bricks and table hue ≈ 10, red LED and wires hue 175–9.</li>
+</ul>
+</li>
+<li><strong>Colour alone still fails:</strong> it picked clutter for both markers.</li>
+<li><strong>Fix: a search region</strong> (<code>markers.region</code> in <code>rig.yaml</code>, <code>SearchRegion</code> in the code). Only blobs where a marker can physically be are accepted:
+<ul>
+<li>green on the arm circle around the servo axis, ±25%;</li>
+<li>pink at the rod length from the green dot, ±10%;</li>
+<li>both below their centre.</li>
+<li>The region uses the geometry in <code>rig.yaml</code>: estimated from one frame until <code>calibrate_rig.py</code> writes the real values.</li>
+</ul>
+</li>
+<li><strong>Live check, 5 s, pendulum at rest:</strong>
+<ul>
+<li>both markers found in <strong>150/150 frames</strong>;</li>
+<li>centroid jitter 0.10–0.14 px RMS;</li>
+<li>θ noise <strong>0.024° RMS</strong>, against a 1° requirement;</li>
+<li>tracking time 1.6 ms per frame (the first frame, a full-frame search, takes 51 ms).</li>
+</ul>
+</li>
+<li><strong>The white LED is in the frame,</strong> hidden behind the ruler's tip. That is fine; it is not detected as a marker.</li>
+</ul>
+<hr />
+<h2 id="8-acceptance-checks-do-these-in-order">8. Acceptance checks (do these in order)</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>Check</th>
+<th>Pass criterion</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Bare servo test (§3.1)</td>
+<td>Smooth motion to 1000/2000/1500 µs, no buzzing at rest</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Wiggle test</td>
+<td>With the arm held still, the rod turns freely but <strong>does not click or rattle</strong> sideways on the axle</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Free swing (rig mounted, not hand-held)</td>
+<td>Released from about 30°, it swings for <strong>over 20 s</strong>, staying in one plane, with no wobble toward or away from the camera</td>
+</tr>
+<tr>
+<td>4</td>
+<td>Loaded servo test</td>
+<td>Commands of 1450 / 1550 / 1500 µs with the rod hanging: no UNO reset, no twitching, no constant buzzing, servo not hot</td>
+</tr>
+<tr>
+<td>5</td>
+<td>Shake test (once the firmware can oscillate the servo)</td>
+<td><strong>No clicking</strong>; the green marker does not jump in the video</td>
+</tr>
+<tr>
+<td>6</td>
+<td>Framing</td>
+<td>Servo shaft, green dot, the pink dot at ±60° (plus margin) and the red LED are all inside the frame (§7.1)</td>
+</tr>
+</tbody>
+</table></div>
+<p>Then run the validation experiments E0–E1 from <a href="test_plan.html"><code>test_plan.md</code></a>.</p>
+<p><strong>Troubleshooting:</strong></p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Symptom</th>
+<th>Likely cause and fix</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>UNO resets, or the supply dips, when the servo moves</td>
+<td>The servo is powered from the UNO, or the ground is not shared. Fix the wiring per §6.1.</td>
+</tr>
+<tr>
+<td>Swing dies within a few seconds</td>
+<td>The axle is too tight, or the rod rubs the washer or head. Adjust the clearances in §3.4.</td>
+</tr>
+<tr>
+<td>Swing wobbles out of plane</td>
+<td>The axle is not square to the arm, or there is too much axial room.</td>
+</tr>
+<tr>
+<td>Clicking during shaking</td>
+<td>The rod hole is too loose for the axle. Use a thicker axle.</td>
+</tr>
+<tr>
+<td>Blurry markers</td>
+<td>Exposure is too long. Add light and shorten the exposure.</td>
+</tr>
+</tbody>
+</table></div>
+<hr />
+<h2 id="9-measure-and-record-then-update-configssimyaml">9. Measure and record (then update <code>configs/sim.yaml</code>)</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Quantity</th>
+<th>Config key</th>
+<th>Nominal</th>
+<th>Measured</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Servo shaft → axle centre</td>
+<td><code>servo.arm_radius</code></td>
+<td>0.07 m</td>
+<td><strong>0.081 m</strong> from the camera, 2026-09-28: the green dot's calibration arc (141.6 px radius, fit RMS 0.13 px) at 1748 px/m, which matches the ruler's own cm graduations (1731–1747 px/m). Hand measurements were 7.7 cm (27 Sep) and 7.2 cm (28 Sep, after re-seating the horn); the owner chose the camera value. <strong>Sets the pivot acceleration in the model</strong>; re-measure after any change to the arm</td>
+</tr>
+<tr>
+<td>Axle centre → magenta marker</td>
+<td><code>camera.marker_distance</code></td>
+<td>0.35 m</td>
+<td><strong>0.237 m</strong> from the camera (calibration: 0.2355 m), 2026-09-28; 25 cm by hand</td>
+</tr>
+<tr>
+<td>Rod length and hole position</td>
+<td>(for the κ prior)</td>
+<td>—</td>
+<td><em>to fill</em></td>
+</tr>
+<tr>
+<td>Axle diameter / rod hole diameter</td>
+<td>(clearance check)</td>
+<td>—</td>
+<td><em>to fill</em></td>
+</tr>
+<tr>
+<td>Rod + bob mass</td>
+<td>(record only)</td>
+<td>—</td>
+<td><strong>43 g</strong> (30 cm steel ruler, no bob), 2026-09-27</td>
+</tr>
+<tr>
+<td>Arm mass</td>
+<td>(record only; servo load)</td>
+<td>&lt; 20 g guideline</td>
+<td><strong>≈ 13 g</strong> (yellow tool, lightened from 23 g), 2026-09-27. Est. servo load ≲ 10–25% of rated torque in planned experiments</td>
+</tr>
+<tr>
+<td>Small-swing period</td>
+<td>(κ check: κ ≈ 4π² / (g T²))</td>
+<td>0.91 s (ruler estimate)</td>
+<td><strong>0.933 ± 0.004 s</strong> from the light gate, 2026-09-28, giving κ ≈ 4.62 (L_eq ≈ 0.216 m). The config keeps 4.834 until identification (E3)</td>
+</tr>
+<tr>
+<td>Lens → pendulum plane distance</td>
+<td><code>camera.px_per_m</code> (after calibration)</td>
+<td>0.75 m</td>
+<td><strong>≈ 1.6 m</strong> lens → pink dot, lens <strong>≈ 97 cm</strong> above the floor (owner, tape, 2026-09-29), so ≈ 1.52 m in front of the swing plane and ≈ 13° looking down. Final calibration 1530 px/m at 1280 × 720 (frame ≈ 84 × 47 cm)</td>
+</tr>
+</tbody>
+</table></div>
+<p>Record every change, with its date, in <a href="engineering_log.html"><code>engineering_log.md</code></a>.</p>
+<hr />
+<h2 id="10-safety">10. Safety</h2>
+<ul>
+<li>Keep your face and hands out of the swing zone (about 50 cm around the pivot) while the servo is powered.</li>
+<li>Unplug the charger before rewiring, and check polarity before connecting the servo.</li>
+<li>Cover sharp points on the arm and the axle tip.</li>
+<li>If the servo gets hot or buzzes continuously, cut power and look for binding or overload.</li>
+</ul>
+</main>
+<footer>
+  <p>Pendulum Lab &middot; Yagyaansh Khaneja &middot; 2026. Every number on these pages comes from a logged run.
+  The source code is in a private repository.</p>
+  <p><a href="index.html">Overview</a> &middot; <a href="twin.html">3D replay</a> &middot;
+  <a href="report.html">Technical report</a> &middot; <a href="report.pdf">PDF</a></p>
+</footer>
+</body>
+</html>

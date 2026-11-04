@@ -1,0 +1,433 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pendulum Rig Setup</title>
+<style>
+  :root {
+    --bg: #f4f3ef; --panel: #ffffff; --ink: #1d1d1f; --muted: #5d6166; --line: #dcd9d2;
+    --accent: #c2410c; --warn-bg: #fff4e5; --warn-ink: #7a3e00; --btn: #ffffff; --btn-ink: #1d1d1f;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #121212; --panel: #1b1b1b; --ink: #ececec; --muted: #a3a3a3; --line: #333;
+      --accent: #fb923c; --warn-bg: #2b1d0e; --warn-ink: #ffcf99; --btn: #262626; --btn-ink: #ececec;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font: 14px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
+         background: var(--bg); color: var(--ink); }
+  .layout { display: grid; grid-template-columns: minmax(0, 1fr) 440px; height: 100vh; }
+  #view { position: relative; overflow: hidden; min-height: 420px; }
+  aside { overflow: auto; padding: 18px 22px 40px; background: var(--panel);
+          border-left: 1px solid var(--line); }
+  @media (max-width: 960px) {
+    .layout { grid-template-columns: 1fr; height: auto; }
+    #view { height: 68vh; }
+    aside { border-left: 0; border-top: 1px solid var(--line); padding: 16px; }
+  }
+  .toolbar { position: absolute; top: 12px; left: 12px; right: 12px; z-index: 3;
+             display: flex; gap: 6px; flex-wrap: wrap; }
+  .toolbar button { font: inherit; font-size: 13px; padding: 6px 11px; border-radius: 7px;
+                    border: 1px solid var(--line); background: var(--btn); color: var(--btn-ink);
+                    cursor: pointer; }
+  .toolbar button[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); }
+  .hint { position: absolute; bottom: 10px; left: 12px; z-index: 3; font-size: 12px;
+          color: var(--muted); background: color-mix(in srgb, var(--panel) 80%, transparent);
+          padding: 3px 8px; border-radius: 6px; }
+  .label { font: 12px/1.3 system-ui, sans-serif; padding: 2px 7px; border-radius: 5px;
+           background: rgba(255,255,255,0.93); color: #151515; border: 1px solid #b9b5ad;
+           white-space: nowrap; pointer-events: none; }
+  .label b { color: #9a3412; }
+  h1 { font-size: 20px; margin: 0 0 4px; }
+  h2 { font-size: 15px; margin: 22px 0 8px; }
+  p, li { color: var(--ink); }
+  .sub { color: var(--muted); margin: 0 0 12px; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th, td { text-align: left; padding: 5px 6px; border-bottom: 1px solid var(--line);
+           vertical-align: top; }
+  th { color: var(--muted); font-weight: 600; }
+  ol, ul { padding-left: 20px; margin: 6px 0; }
+  li { margin: 4px 0; }
+  .warn { background: var(--warn-bg); color: var(--warn-ink); border-radius: 8px;
+          padding: 10px 12px; margin: 12px 0; }
+  .swatch { display: inline-block; width: 10px; height: 10px; border-radius: 2px;
+            margin-right: 5px; vertical-align: -1px; border: 1px solid rgba(0,0,0,.25); }
+  code { font-size: 12.5px; }
+</style>
+</head>
+<body>
+<div class="layout">
+  <div id="view">
+    <div class="toolbar">
+      <button id="btn-overview">Overview</button>
+      <button id="btn-side">Side view</button>
+      <button id="btn-camera">Webcam's view</button>
+      <button id="btn-swing" aria-pressed="true">Swing</button>
+      <button id="btn-labels" aria-pressed="true">Labels</button>
+    </div>
+    <div class="hint" id="hint">Drag to orbit · scroll to zoom · right-drag to pan</div>
+  </div>
+
+  <aside>
+    <h1>Pendulum rig: setup guide</h1>
+    <p class="sub">Dimensions match <code>configs/sim.yaml</code>: arm radius 7 cm, bob marker 35 cm below
+      the pivot, and a camera scale of 8 px/cm at the pendulum plane. This is a diagram, not a photo.
+      Wire colours and part shapes are approximate.</p>
+
+    <h2>Key dimensions</h2>
+    <table>
+      <tr><th>Item</th><th>Value</th></tr>
+      <tr><td>Servo axis → pivot (arm)</td><td>7 cm, arm pointing straight down at the servo centre (1500 µs)</td></tr>
+      <tr><td>Pivot → bob marker</td><td>35 cm</td></tr>
+      <tr><td>Rod length</td><td>≈ 45 cm (light, stiff: wooden ruler or stick)</td></tr>
+      <tr><td>Bob mass</td><td>30–50 g (steel nuts on a bolt through the rod)</td></tr>
+      <tr><td>Pendulum plane → backdrop</td><td>≈ 4 cm (the rod must never touch it)</td></tr>
+      <tr><td>Webcam lens → pendulum plane</td><td>≈ 75 cm, lens ≈ 22 cm below the servo axis</td></tr>
+      <tr><td>Field of view at the plane</td><td>≈ 80 × 60 cm (640 × 480 px)</td></tr>
+      <tr><td>Swing limit (software)</td><td>±60°; keep ≥ 50 cm clear around the pivot</td></tr>
+    </table>
+
+    <h2>Wiring</h2>
+    <table>
+      <tr><th>From</th><th>To</th></tr>
+      <tr><td><span class="swatch" style="background:#e8792b"></span>Servo orange (signal)</td><td>UNO <b>D9</b></td></tr>
+      <tr><td><span class="swatch" style="background:#d62828"></span>Servo red (+)</td><td>Breadboard <b>+ rail</b> (charger 5 V)</td></tr>
+      <tr><td><span class="swatch" style="background:#6b4423"></span>Servo brown (−)</td><td>Breadboard <b>− rail</b></td></tr>
+      <tr><td>Charger red / black</td><td>Breadboard + rail / − rail</td></tr>
+      <tr><td>UNO <b>GND</b></td><td>Breadboard − rail (common ground: required)</td></tr>
+      <tr><td>100 µF capacitor</td><td>Across the rails near the servo (− leg to − rail)</td></tr>
+      <tr><td>Photoresistor</td><td>UNO 5V → LDR → <b>A0</b> → 10 kΩ → UNO GND</td></tr>
+      <tr><td>Gate LED (white)</td><td>UNO <b>D7</b> → 220 Ω → LED → GND</td></tr>
+      <tr><td>Latency LED (red)</td><td>UNO <b>D8</b> → 220 Ω → LED → GND</td></tr>
+      <tr><td>UNO USB</td><td>Laptop</td></tr>
+    </table>
+    <div class="warn"><b>Never</b> power the servo from the UNO's 5V pin, and <b>never</b> join the UNO's
+      5V to the charger's +5 V. Connect the grounds only.</div>
+
+    <h2>Build order</h2>
+    <ol>
+      <li><b>Centre the servo first.</b> Send 1500 µs, <i>then</i> screw the arm on pointing straight down.</li>
+      <li>Glue or screw the SG90 to the front face of a wooden block. Put the block on the table edge
+        and weigh or clamp it down, so the arm swings just in front of the edge.</li>
+      <li>Arm: a popsicle stick with a hole 7 cm from the servo shaft. Push a smooth nail through it,
+        pointing towards the camera.</li>
+      <li>Rod: drill a hole slightly larger than the nail near the top, and hang it on the nail. Add a
+        tape collar so it can't slide off. It should swing freely for more than 20 s from 30°.</li>
+      <li>Bob: 30–50 g of nuts on a bolt through the rod. Tape a 5 × 5 cm cardboard vane below it.</li>
+      <li>Markers: matte (not glossy) paper circles. <b>Green</b> (≈1.5 cm) on the nail head at the pivot,
+        <b>magenta</b> (≈2.5 cm) on the bob, 35 cm from the pivot.</li>
+      <li>Backdrop: a matte black card taped to the table edge, hanging behind the pendulum.
+        For test E1a, tape the two-page protractor (25 cm, ±45°) so its crosshair is exactly
+        behind the pivot nail and its 0° line hangs vertical (check it against the resting rod).
+        Run every wire along the backdrop edges, outside the swing area.</li>
+      <li>Light gate: the white LED on the backdrop at vane height, shining towards the camera,
+        and the photoresistor on a stand in front, so the vane cuts the beam at the bottom of the swing.</li>
+      <li>Latency LED: red, fixed to the backdrop's top-right corner, inside the camera frame.</li>
+      <li>Laptop: screen <i>facing the rig</i>, about 75 cm away, raised on a stool or books so the servo appears
+        near the top of the image. Check this with <b>Webcam's view</b>.</li>
+      <li>Lamp: a bright DC LED lamp above and to the front-left, angled so the markers don't glare.
+        The camera needs about 4–8 ms exposure.</li>
+    </ol>
+
+    <h2>Parts</h2>
+    <ul>
+      <li><b>Owned:</b> UNO R3, SG90, breadboard, 100 µF capacitor, photoresistor, 10 kΩ, 2× 220 Ω,
+        white and red LEDs, jumper wires, USB cable, laptop webcam.</li>
+      <li><b>Household:</b> wooden block, popsicle stick, smooth nail, wooden ruler or stick,
+        nuts and bolt, cardboard, black card, tape, stool or books, desk lamp, spare 5 V ≥ 2 A phone
+        charger (with its cable cut).</li>
+      <li><b>Print:</b> <code>docs/print/protractor_R250_A4x2.pdf</code>, a 25 cm radius, ±45°
+        protractor with 1° ticks on 2 A4 sheets. Print at <b>actual size on A4</b>, then check that the horizontal and vertical
+        check bars are <b>equal in length</b>. Exactly 10 cm is ideal but not required, because angles
+        survive uniform scaling. The static test only needs ±45°, and 1 mm of alignment
+        error at 25 cm radius is about 0.23°.</li>
+    </ul>
+
+    <h2>Safety</h2>
+    <ul>
+      <li>Keep your face and hands out of the swing zone while the servo is powered.</li>
+      <li>Unplug the charger before rewiring. Check polarity before connecting it.</li>
+    </ul>
+  </aside>
+</div>
+
+<script type="importmap">
+{ "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+} }
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
+
+// Units: centimetres. Origin: servo axis. x right, y up, z towards the camera.
+const ARM_R = 7, MARKER_D = 35, OMEGA = Math.sqrt(9.81 * 2.857); // rad/s, from sim.yaml
+const LENS = new THREE.Vector3(0, -22.5, 77.5);
+const PLANE_Z = 2.6;
+
+const view = document.getElementById('view');
+const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.shadowMap.enabled = true;
+view.appendChild(renderer.domElement);
+const labelRenderer = new CSS2DRenderer();
+Object.assign(labelRenderer.domElement.style, { position: 'absolute', top: '0', left: '0', pointerEvents: 'none' });
+view.appendChild(labelRenderer.domElement);
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0xe8e5de);
+const camera = new THREE.PerspectiveCamera(42, 1, 0.5, 3000);
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+
+scene.add(new THREE.HemisphereLight(0xffffff, 0x8a8577, 1.4));
+const sun = new THREE.DirectionalLight(0xffffff, 1.3);
+sun.position.set(-80, 140, 120);
+sun.castShadow = true;
+sun.shadow.mapSize.set(2048, 2048);
+Object.assign(sun.shadow.camera, { left: -120, right: 120, top: 120, bottom: -120, near: 1, far: 500 });
+scene.add(sun);
+
+// ---------- helpers ----------
+const mat = (color, extra = {}) => new THREE.MeshStandardMaterial({ color, roughness: 0.85, ...extra });
+function span(x0, x1, y0, y1, z0, z1, color, parent = scene, extra) {
+  const m = new THREE.Mesh(new THREE.BoxGeometry(x1 - x0, y1 - y0, z1 - z0), mat(color, extra));
+  m.position.set((x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2);
+  m.castShadow = m.receiveShadow = true;
+  parent.add(m);
+  return m;
+}
+function cylZ(r, z0, z1, color, x, y, parent = scene, sides = 24, extra) {
+  const m = new THREE.Mesh(new THREE.CylinderGeometry(r, r, z1 - z0, sides), mat(color, extra));
+  m.rotation.x = Math.PI / 2;
+  m.position.set(x, y, (z0 + z1) / 2);
+  m.castShadow = true;
+  parent.add(m);
+  return m;
+}
+function disc(r, color, x, y, z, parent = scene) {
+  const m = new THREE.Mesh(new THREE.CircleGeometry(r, 32), new THREE.MeshBasicMaterial({ color }));
+  m.position.set(x, y, z);
+  parent.add(m);
+  return m;
+}
+function polyline(points, color, { dashed = false, parent = scene, opacity = 1 } = {}) {
+  const g = new THREE.BufferGeometry().setFromPoints(points.map(p => new THREE.Vector3(...p)));
+  const m = dashed
+    ? new THREE.LineDashedMaterial({ color, dashSize: 1.6, gapSize: 1.1, transparent: opacity < 1, opacity })
+    : new THREE.LineBasicMaterial({ color, transparent: opacity < 1, opacity });
+  const l = new THREE.Line(g, m);
+  if (dashed) l.computeLineDistances();
+  parent.add(l);
+  return l;
+}
+function wire(points, color, radius = 0.25) {
+  const curve = new THREE.CatmullRomCurve3(points.map(p => new THREE.Vector3(...p)));
+  const m = new THREE.Mesh(new THREE.TubeGeometry(curve, 80, radius, 8), mat(color, { roughness: 0.6 }));
+  m.castShadow = true;
+  scene.add(m);
+  return m;
+}
+const labels = [];
+function label(html, pos, parent = scene) {
+  const div = document.createElement('div');
+  div.className = 'label';
+  div.innerHTML = html;
+  const o = new CSS2DObject(div);
+  o.position.set(...pos);
+  parent.add(o);
+  labels.push(o);
+  return o;
+}
+const arcPts = (cx, cy, z, r, a0, a1, n = 64) =>
+  Array.from({ length: n + 1 }, (_, i) => {
+    const a = THREE.MathUtils.degToRad(a0 + (a1 - a0) * i / n);
+    return [cx + r * Math.sin(a), cy - r * Math.cos(a), z];
+  });
+
+// ---------- room ----------
+const floor = new THREE.Mesh(new THREE.PlaneGeometry(400, 400), mat(0xd6d1c6));
+floor.rotation.x = -Math.PI / 2; floor.position.y = -75; floor.receiveShadow = true;
+scene.add(floor);
+
+// Table: top surface at y = -2, front edge at z = -2
+const WOOD = 0xa9825a;
+span(-65, 65, -5, -2, -75, -2, WOOD);
+for (const [x, z] of [[-62, -72], [62, -72], [-62, -5], [62, -5]]) span(x - 2.5, x + 2.5, -75, -5, z - 2.5, z + 2.5, 0x8c6a47);
+label('Table', [-52, -1, -30]);
+
+// Backdrop: matte black card hanging from the table edge
+span(-45, 45, -66, -5, -1.95, -1.7, 0x141414, scene, { roughness: 1 });
+label('Matte black backdrop, taped to the table edge', [-30, -63, -1.5]);
+
+// Protractor sheet: 25 cm radius, ±45°, two A4 sheets (docs/print/), centred on the pivot
+span(-21, 21, -ARM_R - 27, -ARM_R + 2.7, -1.68, -1.64, 0xf4f4f0);   // the paper
+for (let a = -45; a <= 45; a += 15) {
+  const s = Math.sin(THREE.MathUtils.degToRad(a)), c = Math.cos(THREE.MathUtils.degToRad(a));
+  polyline([[2 * s, -ARM_R - 2 * c, -1.6], [25 * s, -ARM_R - 25 * c, -1.6]], a === 0 ? 0x000000 : 0x555555);
+}
+polyline(arcPts(0, -ARM_R, -1.6, 25, -45, 45), 0x555555);
+label('Protractor sheet, centred on the pivot (test E1a)', [-26, -18, -1.5]);
+
+// ---------- servo + arm + pendulum ----------
+span(-4.5, 4.5, -2, 5, -10, -1.3, 0xc9a06a);                 // wooden mounting block
+span(-1.2, 1.2, -1.2, 1.2, -1.3, 1.0, 0x2f64c8);                // SG90 body (shaft on +z face)
+span(-2.0, 2.0, -0.5, 0.5, -0.1, 0.15, 0x2f64c8);               // mounting tabs
+cylZ(0.3, 1.0, 1.35, 0xf2f2f2, 0, 0);                            // output shaft
+label('<b>SG90 servo</b> on a wooden block', [-16, 9, 0]);
+
+const armGroup = new THREE.Group(); scene.add(armGroup);
+span(-0.9, 0.9, -ARM_R - 1.2, 1.3, 1.35, 1.65, 0xe9cf9c, armGroup);   // popsicle-stick arm
+cylZ(0.18, 1.1, 4.0, 0x9aa1a8, 0, -ARM_R, armGroup, 16, { metalness: 0.6, roughness: 0.4 }); // pivot nail
+disc(0.8, 0x19c24a, 0, -ARM_R, 4.05, armGroup);                   // green pivot marker
+label('Arm 7 cm · nail pivot · <b>green marker</b>', [-19, -ARM_R, 4], armGroup);
+
+const pend = new THREE.Group(); pend.position.set(0, -ARM_R, 0); armGroup.add(pend);
+span(-0.65, 0.65, -45, 1.3, 2.05, 2.55, 0xd8b47a, pend);          // rod
+span(-1.1, 1.1, 0.35, 1.0, 3.3, 3.7, 0xbfbfbf, pend);             // tape collar
+for (const z of [[2.6, 3.3], [1.3, 2.0]]) cylZ(1.35, z[0], z[1], 0x8c9197, 0, -39.5, pend, 6, { metalness: 0.7, roughness: 0.35 });
+disc(1.25, 0xe0209a, 0, -MARKER_D, 2.62, pend);                   // magenta bob marker
+span(-2.5, 2.5, -48.5, -43.5, 2.15, 2.45, 0xc4a06c, pend);        // cardboard vane
+label('<b>Magenta marker</b>, 35 cm below pivot', [15, -MARKER_D, 3], pend);
+label('Nuts 30–50 g + vane', [-13, -41, 3], pend);
+
+// Swing limit and keep-clear zone
+polyline(arcPts(0, -ARM_R, PLANE_Z + 0.4, MARKER_D, -60, 60), 0xd9480f, { dashed: true });
+polyline(arcPts(0, -ARM_R, PLANE_Z + 0.4, 50, -70, 70), 0xd9480f, { dashed: true, opacity: 0.45 });
+label('±60° swing limit · keep 50 cm clear', [-34, -34, PLANE_Z]);
+
+// ---------- light gate ----------
+cylZ(0.3, -1.7, -1.0, 0xfffbe6, 0, -46, scene, 16, { emissive: 0xfff3b0, emissiveIntensity: 0.8 });
+span(-2, 2, -75, -47.2, 10.5, 14.5, 0x9c7b52);                    // stand (books / cardboard)
+disc(0.55, 0xd9481f, 0, -46, 10.45).rotation.y = Math.PI;      // photoresistor, facing the backdrop LED
+polyline([[0, -46, -1.0], [0, -46, 10.4]], 0xf5c518, { dashed: true });
+label('Light gate: LED → beam → photoresistor', [17, -60, 12]);
+
+// ---------- latency LED ----------
+cylZ(0.3, -1.7, -1.0, 0xff2a2a, 38, -9, scene, 16, { emissive: 0xff0000, emissiveIntensity: 0.9 });
+label('Red latency LED (D8)', [38, -4.5, -1]);
+
+// ---------- electronics on the table ----------
+span(20, 26.9, -2, -0.4, -21, -15.7, 0x1f5fbf);                  // UNO R3
+span(18, 34.5, -2, -1, -33, -27.5, 0xf1f1f1);                    // breadboard
+span(46, 51, -2, 1, -31, -26, 0x222222);                          // phone charger
+label('<b>UNO R3</b> (USB → laptop)', [34, 12, -10]);
+label('Breadboard: +5 V from charger, common GND', [18, 1, -62]);
+label('5 V ≥ 2 A phone charger', [66, 15, -28.5]);
+
+wire([[26.9, -1.2, -18.5], [31, -1.4, -8], [33, -3, -0.5], [34, -14, 10], [26, -38, 40], [16.5, -44, 58]], 0x2b5fd9, 0.35); // USB
+wire([[1.2, 0, -1.2], [4, 0.6, -6], [10, 0.2, -18], [19, -0.8, -29]], 0xe8792b, 0.22);   // servo lead
+wire([[46, -1.2, -28.5], [40, -1.0, -29.5], [34.5, -1.2, -30]], 0x333333, 0.25);         // charger
+wire([[21, -0.6, -16], [24, -1.2, -8], [34, -3, -2.2], [38, -8, -1.9]], 0xd62828, 0.15); // D8 → latency LED
+wire([[22, -0.6, -16], [38, -1.4, -5], [43.5, -3, -2.1], [43.5, -40, -1.9], [40, -46, -1.9], [0.6, -46, -1.9]], 0xf1f1f1, 0.15); // D7 → gate LED, routed along the backdrop edge
+wire([[2, -46.5, 12.5], [8, -60, 13], [36, -52, 6], [37, -4, -1.8], [24, -0.6, -16]], 0x16a34a, 0.15); // LDR → A0
+
+// ---------- laptop on a stool, screen facing the rig ----------
+span(-20, 20, -75, -45.2, 50, 82, 0x5d5d5d);                     // stool / stack of books
+span(-16, 16, -45.2, -43.4, 53, 75, 0xa3a8ae);                   // laptop base (hinge at z = 75)
+const lid = new THREE.Group(); lid.position.set(0, -43.4, 75); lid.rotation.x = THREE.MathUtils.degToRad(-10); scene.add(lid);
+span(-16, 16, 0, 21, 0, 0.8, 0xa3a8ae, lid);                     // lid
+span(-15, 15, 1.2, 19.3, -0.05, 0.02, 0x0f1520, lid);            // screen (faces -z, towards the rig)
+disc(0.35, 0x000000, 0, 20.2, -0.08, lid).rotation.y = Math.PI;  // webcam lens
+label('<b>Laptop webcam</b>: screen faces the rig, ≈ 75 cm', [0, 24, 0], lid);
+
+// Camera field of view at the pendulum plane: 80 × 60 cm (640 × 480 at 8 px/cm)
+const fov = new THREE.Group(); scene.add(fov);
+const TOP = 7.5, BOT = -52.5, HALF_W = 40;
+const corners = [[-HALF_W, TOP], [HALF_W, TOP], [HALF_W, BOT], [-HALF_W, BOT]];
+for (const [x, y] of corners) polyline([[LENS.x, LENS.y, LENS.z], [x, y, PLANE_Z]], 0x2563eb, { parent: fov, opacity: 0.55 });
+polyline([...corners, corners[0]].map(([x, y]) => [x, y, PLANE_Z]), 0x2563eb, { parent: fov });
+const fovFill = new THREE.Mesh(new THREE.PlaneGeometry(2 * HALF_W, TOP - BOT),
+  new THREE.MeshBasicMaterial({ color: 0x2563eb, transparent: true, opacity: 0.05, side: THREE.DoubleSide, depthWrite: false }));
+fovFill.position.set(0, (TOP + BOT) / 2, PLANE_Z); fov.add(fovFill);
+label('Webcam frame: 80 × 60 cm = 640 × 480 px', [-HALF_W + 16, BOT - 3, PLANE_Z], fov);
+
+// ---------- lamp on the table, head leaning over the edge ----------
+const lampHead = new THREE.Vector3(-30, 24, 26);
+span(-56, -46, -2, -1, -26, -16, 0x2b2b2b);                       // base
+polyline([[-51, -1, -21], [-50, 22, -8], lampHead.toArray()], 0x2b2b2b);
+const shade = new THREE.Mesh(new THREE.ConeGeometry(3.2, 5, 24, 1, true), mat(0x2b2b2b, { side: THREE.DoubleSide }));
+shade.position.copy(lampHead); scene.add(shade);
+const lampTarget = new THREE.Vector3(0, -22, PLANE_Z);
+shade.lookAt(lampTarget); shade.rotateX(-Math.PI / 2);
+const spot = new THREE.SpotLight(0xfff6e0, 2.2, 0, Math.PI / 7, 0.4, 0);
+spot.position.copy(lampHead); spot.target.position.copy(lampTarget); spot.castShadow = true;
+scene.add(spot, spot.target);
+label('Bright DC LED lamp, front-left, ~45°', [lampHead.x - 4, lampHead.y + 6, lampHead.z]);
+
+// ---------- views ----------
+const views = {
+  overview: { pos: [-95, 38, 165], target: [4, -26, 8], fov: 42 },
+  side: { pos: [-175, -12, 38], target: [0, -28, 38], fov: 38 },
+  camera: { pos: LENS.toArray(), target: [0, -22.5, PLANE_Z], fov: 2 * THREE.MathUtils.radToDeg(Math.atan(30 / (LENS.z - PLANE_Z))) },
+};
+let current = 'overview';
+let swinging = true, showLabels = true;
+function setView(name) {
+  current = name;
+  const v = views[name];
+  camera.position.set(...v.pos);
+  controls.target.set(...v.target);
+  camera.fov = v.fov;
+  camera.updateProjectionMatrix();
+  controls.enabled = name !== 'camera';
+  fov.visible = name !== 'camera';
+  lid.visible = name !== 'camera';
+  labels.forEach(l => { l.visible = showLabels && name !== 'camera'; });
+  document.getElementById('hint').textContent = name === 'camera'
+    ? 'Approximate webcam view (fixed). The servo should sit near the top of the frame.'
+    : 'Drag to orbit · scroll to zoom · right-drag to pan';
+  resize();
+  controls.update();
+}
+document.getElementById('btn-overview').onclick = () => setView('overview');
+document.getElementById('btn-side').onclick = () => setView('side');
+document.getElementById('btn-camera').onclick = () => setView('camera');
+
+const swingBtn = document.getElementById('btn-swing');
+swingBtn.onclick = () => { swinging = !swinging; swingBtn.setAttribute('aria-pressed', swinging); };
+const labelBtn = document.getElementById('btn-labels');
+labelBtn.onclick = () => {
+  showLabels = !showLabels;
+  labelBtn.setAttribute('aria-pressed', showLabels);
+  labels.forEach(l => { l.visible = showLabels && current !== 'camera'; });
+};
+
+function resize() {
+  const w = view.clientWidth, h = view.clientHeight;
+  renderer.setSize(w, h);
+  labelRenderer.setSize(w, h);
+  camera.aspect = w / h;
+  if (current === 'camera') {
+    // Keep the full 4:3 webcam frame visible regardless of the panel's aspect ratio.
+    const vfov = views.camera.fov, frameAspect = 4 / 3;
+    camera.fov = camera.aspect < frameAspect
+      ? 2 * THREE.MathUtils.radToDeg(Math.atan(Math.tan(THREE.MathUtils.degToRad(vfov / 2)) * frameAspect / camera.aspect))
+      : vfov;
+  }
+  camera.updateProjectionMatrix();
+}
+new ResizeObserver(resize).observe(view);
+
+// ---------- animation: resonant pumping, theta leads phi by 90 deg ----------
+const clock = new THREE.Clock();
+let t = 0;
+function frame() {
+  const dt = clock.getDelta();
+  if (swinging) t += dt;
+  armGroup.rotation.z = THREE.MathUtils.degToRad(6) * Math.sin(OMEGA * t);
+  pend.rotation.z = THREE.MathUtils.degToRad(30) * Math.cos(OMEGA * t) - armGroup.rotation.z;
+  controls.update();
+  renderer.render(scene, camera);
+  labelRenderer.render(scene, camera);
+  requestAnimationFrame(frame);
+}
+setView(views[location.hash.slice(1)] ? location.hash.slice(1) : 'overview');
+frame();
+</script>
+</body>
+</html>

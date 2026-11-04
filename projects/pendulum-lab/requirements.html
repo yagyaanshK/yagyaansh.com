@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="Version: v1.1, 2026-09-27. v1.0 was frozen on 2026-09-26. v1.1 revises R-I1, H1 and go/no-go item 3 after the simulation campaign (E2) and before any hardwar...">
+<meta name="author" content="Yagyaansh Khaneja">
+<link rel="icon" type="image/x-icon" href="../../assets/images/art.svg">
+<title>Requirements and Hypotheses | Pendulum Lab | Yagyaansh Khaneja</title>
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+<link rel="stylesheet" href="site.css">
+</head>
+<body class="doc">
+<nav class="top" aria-label="Breadcrumb">
+  <a href="../../index.html" title="Yagyaansh Khaneja">yagyaansh.com</a><span class="crumb" aria-hidden="true">/</span>
+  <a href="../../projects.html" title="Projects">Projects</a><span class="crumb" aria-hidden="true">/</span>
+  <a href="index.html" title="Pendulum Lab">Pendulum Lab</a>
+</nav>
+<main>
+<h1 id="requirements-and-hypotheses">Requirements and Hypotheses</h1>
+<p><strong>Version:</strong> v1.1, 2026-09-27. v1.0 was frozen on 2026-09-26.
+v1.1 revises R-I1, H1 and go/no-go item 3 <strong>after the simulation campaign (E2) and before any hardware identification data exists</strong>. The v1.0 wording is kept (struck through) and simulation results are reported against <strong>both</strong> versions. See the change log.
+Any change after freezing is recorded in the change log at the bottom, together with its reason.</p>
+<h2 id="purpose">Purpose</h2>
+<p>Build a rig that runs its own physics experiments. It:</p>
+<ol>
+<li><strong>observes</strong> a servo-driven pendulum with a webcam;</li>
+<li><strong>estimates</strong> the pendulum's state despite latency;</li>
+<li><strong>chooses</strong> its own excitation experiments, so that it identifies the system's physics as fast as possible;</li>
+<li><strong>uses</strong> the identified model for feedback control.</li>
+</ol>
+<p>Every claim is backed by a measurement against an independent reference.</p>
+<h2 id="hardware-baseline-owned-parts-only-as-decided-on-2026-09-26">Hardware baseline (owned parts only, as decided on 2026-09-26)</h2>
+<p><strong>In use:</strong></p>
+<ul>
+<li><strong>Board:</strong> ELEGOO UNO R3 or the Mega 2560 clone (5 V logic).</li>
+<li><strong>Servo:</strong> SG90 (plastic gears).</li>
+<li><strong>Camera:</strong> the laptop webcam. Measured: 640×480 at about 30 fps, manual exposure works, fixed focus.</li>
+<li><strong>Pivot:</strong> an improvised pin through a hole in the rod. There is no bearing, so Coulomb friction is expected, and the model includes it.</li>
+<li><strong>Timing reference:</strong> a photoresistor light gate.</li>
+</ul>
+<p><strong>Upgrades, bought only if the go/no-go gate shows they are needed:</strong></p>
+<ul>
+<li><strong>U1:</strong> AS5600 magnetic angle sensor (a direct angle reference).</li>
+<li><strong>U2:</strong> MG996R metal-gear servo.</li>
+<li><strong>U3:</strong> 608 bearing.</li>
+<li><strong>U4:</strong> a 5 V ≥3 A supply.</li>
+<li><strong>U5:</strong> an external 30–60 fps webcam.</li>
+</ul>
+<h2 id="requirements">Requirements</h2>
+<p>Each requirement has an ID, a measurable criterion, and the method used to verify it.</p>
+<h3 id="sensing-s">Sensing (S)</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Requirement</th>
+<th>Verification</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>R-S1</td>
+<td>The camera delivers ≥ 28 fps at 640×480 with manual exposure ≤ 8 ms.</td>
+<td>E0: frame-interval statistics over ≥ 60 s</td>
+</tr>
+<tr>
+<td>R-S2</td>
+<td>Markers are detected in ≥ 98% of delivered frames under the rig lighting.</td>
+<td>E1: detection rate over ≥ 60 s of swinging</td>
+</tr>
+<tr>
+<td>R-S3</td>
+<td>Static angle accuracy vs a printed protractor reference: RMS error ≤ 1.0° over 7 angles in [−45°, 45°].</td>
+<td>E1a</td>
+</tr>
+<tr>
+<td>R-S4</td>
+<td>Camera-derived swing period agrees with the light-gate period within 0.2%. Constant delays cancel in a period, so this checks timing consistency.</td>
+<td>E1b</td>
+</tr>
+<tr>
+<td>R-S5</td>
+<td>End-to-end camera latency (from an LED toggled by the board to the frame showing it) is measured as a distribution: median, IQR, resolution ≤ ±17 ms. <strong>Go/no-go: median ≤ 150 ms.</strong></td>
+<td>E1c</td>
+</tr>
+<tr>
+<td>R-S6</td>
+<td>Board-to-host clock offset is estimated by ping round-trip, with uncertainty ≤ 2 ms.</td>
+<td>E1c</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="actuation-a">Actuation (A)</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Requirement</th>
+<th>Verification</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>R-A1</td>
+<td>Servo commands are sent at 50 Hz. Commands are software-limited to |φ_cmd| ≤ 60°.</td>
+<td>Code inspection + unit test</td>
+</tr>
+<tr>
+<td>R-A2</td>
+<td>The servo is powered from a supply separate from the board's 5 V pin, with a shared ground. There are no board resets during a 10-minute excitation test.</td>
+<td>E0 power test, and an event-log check for resets</td>
+</tr>
+<tr>
+<td>R-A3</td>
+<td>Servo dead time, natural frequency and rate limit are identified, with uncertainty reported.</td>
+<td>E3</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="modelling-and-simulation-m-done-2026-09-26-2626-tests-pass">Modelling and simulation (M). Done 2026-09-26: 26/26 tests pass</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Requirement</th>
+<th>Verification</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>R-M1</td>
+<td>Simulated period matches the exact elliptic-integral solution within 1e-4 (relative) at 0.01, 1 and 2 rad amplitude.</td>
+<td><code>tests/test_dynamics.py</code></td>
+</tr>
+<tr>
+<td>R-M2</td>
+<td>Energy drift with no damping is &lt; 1e-6 (relative) over 20 s. Energy never increases with damping.</td>
+<td><code>tests/test_dynamics.py</code></td>
+</tr>
+<tr>
+<td>R-M3</td>
+<td>The integrator shows 4th-order convergence (measured order 4 ± 0.3).</td>
+<td><code>tests/test_dynamics.py</code></td>
+</tr>
+<tr>
+<td>R-M4</td>
+<td>Forced response to horizontal pivot motion matches the analytic linear resonance curve within 2%.</td>
+<td><code>tests/test_dynamics.py</code></td>
+</tr>
+<tr>
+<td>R-M5</td>
+<td>The camera model reproduces the configured frame rate, drop rate, latency and centroid noise, and blur shifts the centroid to mid-exposure.</td>
+<td><code>tests/test_camera_world.py</code></td>
+</tr>
+<tr>
+<td>R-M6</td>
+<td>Simulated runs are bit-for-bit reproducible for a given seed.</td>
+<td><code>tests/test_camera_world.py</code></td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="identification-and-experiment-design-i">Identification and experiment design (I)</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Requirement</th>
+<th>Verification</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>R-I1</td>
+<td><strong>v1.1:</strong> In simulation, κ and the <strong>servo's combined phase delay at the pendulum frequency</strong> are recovered within 5%, and damping parameters (β, μ, η) within 20%, on ≥ 90% of seeds. ω_n and dead time are reported with their posterior correlation, not gated.<br>~~v1.0: κ, servo ω_n and dead time within 5%, and damping within 20%, on ≥ 90% of seeds.~~</td>
+<td>E2</td>
+</tr>
+<tr>
+<td>R-I2</td>
+<td>Every fit reports a posterior covariance, and ≥ 90% of true parameters in simulation fall inside the 95% intervals (calibration check).</td>
+<td>E2</td>
+</tr>
+<tr>
+<td>R-I3</td>
+<td>Candidate excitations whose predicted |θ| exceeds 60° are rejected (safety constraint).</td>
+<td>Unit test + E2 log audit</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="control-c">Control (C)</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Requirement</th>
+<th>Verification</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>R-C1</td>
+<td>Amplitude regulation: the swing reaches the target amplitude (15°, 25°, 35°) within ±2° inside 20 s on ≥ 80% of hardware trials.</td>
+<td>E5</td>
+</tr>
+<tr>
+<td>R-C2</td>
+<td>Safety stop: if |θ| &gt; 70° is observed, the servo is commanded to hold 0 and the run is aborted and logged.</td>
+<td>Unit test + E5</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="reproducibility-and-documentation-r">Reproducibility and documentation (R)</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Requirement</th>
+<th>Verification</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>R-R1</td>
+<td>Every run directory contains config, seed, git SHA and a dirty flag.</td>
+<td>Unit test</td>
+</tr>
+<tr>
+<td>R-R2</td>
+<td>Every figure in the report is regenerated by a script in <code>analysis/</code> from logged runs.</td>
+<td>Report build</td>
+</tr>
+<tr>
+<td>R-R3</td>
+<td>CI runs lint + tests + a simulation smoke run on every push.</td>
+<td>GitHub Actions</td>
+</tr>
+<tr>
+<td>R-R4</td>
+<td><code>docs/engineering_log.md</code> has an entry for every working day: decision, failure, evidence, next step.</td>
+<td>Review</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="hypotheses-to-be-tested-not-assumed">Hypotheses (to be tested, not assumed)</h2>
+<p>A negative result, reported with its evidence, is an acceptable outcome.</p>
+<ul>
+<li><strong>H1 (identification efficiency), v1.1, pre-registered for hardware:</strong> Bayesian D-optimal excitation reaches a held-out 3 s prediction NRMSE within <strong>10% of the noise floor</strong> in ≤ 50% of the experiment time the chirp baseline needs to reach the same level. The noise floor is the NRMSE of the best available model on the same held-out data: the true parameters in simulation, and a long-record fit on hardware. Tested in simulation and on hardware (≥ 8 runs per method, interleaved).
+<ul>
+<li>~~v1.0: D-optimal reaches the chirp's held-out 3 s NRMSE at the full budget in ≤ 50% of the experiment time.~~ This was mis-specified: at the full budget the chirp is already at the noise floor (1.003×), so the comparison mostly measures noise.</li>
+</ul>
+</li>
+<li><strong>H2 (actuator and latency modelling):</strong> Including the servo model and latency compensation reduces closed-loop RMS amplitude error by ≥ 30% compared with the same controller without them.</li>
+<li><strong>H3 (damping law):</strong> The damping law is identifiable. Viscous + Coulomb and viscous + quadratic are distinguishable by held-out negative log-likelihood (ΔNLL significant across runs).</li>
+</ul>
+<h2 id="gono-go-gate-2026-10-05">Go/no-go gate (2026-10-05)</h2>
+<p><strong>Continue with this hardware if all three hold:</strong></p>
+<ol>
+<li>R-S3 is met (angle RMS ≤ 1.0°).</li>
+<li>The median latency in R-S5 is ≤ 150 ms.</li>
+<li><strong>v1.1:</strong> In simulation, the control-relevant parameters (<strong>κ and the servo's combined phase delay</strong>) are recovered within 5% on ≥ 90% of seeds. Damping parameters are reported with their uncertainties but are not gated.
+~~v1.0: R-I1 is met in simulation.~~</li>
+</ol>
+<p><strong>Otherwise:</strong></p>
+<ul>
+<li><strong>If (1) fails:</strong> buy U1 (AS5600).</li>
+<li><strong>If (2) fails:</strong> buy U5 (external webcam).</li>
+<li><strong>If the servo or pivot mechanics fail:</strong> buy U2 and U3.</li>
+<li><strong>If the rig as a whole is not viable:</strong> switch to the fallback project (see <code>../PROJECT_STRATEGY.md</code>).</li>
+</ul>
+<h2 id="change-log">Change log</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Date</th>
+<th>Change</th>
+<th>Reason</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>2026-09-26</td>
+<td>v1.0 frozen. The damping tolerance in R-I1 was loosened to 20% (the strategy document said 5% for all parameters).</td>
+<td>Damping parameters are weakly identifiable at small amplitude; an honest tolerance beats a gate that fails for known physical reasons.</td>
+</tr>
+<tr>
+<td>2026-09-26</td>
+<td>Validation uses a protractor sheet and a light gate instead of the AS5600.</td>
+<td>Owned-parts-only decision; the AS5600 is upgrade U1.</td>
+</tr>
+<tr>
+<td>2026-09-27</td>
+<td><em>(Proposal, superseded by the next row.)</em> in R-I1 replace &quot;servo ω_n and dead time within 5%&quot; by &quot;servo phase delay at the pendulum frequency within 5%&quot;; and in H1 compare protocols at a budget where the chirp has not yet reached the noise floor (or use time-to-within-10%-of-floor).</td>
+<td>E2 simulation (60 units, <code>runs/20260927-022330_e2_sim_campaign</code>, engineering log 2026-09-27 M3): only the servo's total phase delay is identifiable near 1 Hz (within 5% in 100% of units, median error 1.1%), while ω_n and dead time individually pass in 33–50% and 13–18%. As frozen, R-I1 fails for every protocol (D-opt all-pass 13%), so go/no-go item 3 currently fails in simulation; with the proposed wording D-opt passes 72% (limited by μ), still below 90%. H1 as frozen is not supported (D-opt reaches the chirp's final NRMSE within 15 s in 40% of units) because the chirp's 30 s value sits at 1.003 × the noise floor.</td>
+</tr>
+<tr>
+<td>2026-09-27</td>
+<td><strong>v1.1 applied (owner decision).</strong> R-I1, H1 and go/no-go item 3 are revised as shown above; the v1.0 wording is kept. The revisions are pre-registered for the hardware campaign (E3, E5), for which no data exists yet. Simulation results are reported against both versions and labelled as a post-hoc finding.</td>
+<td>E2 simulation (60 units, engineering log 2026-09-27 M3). Near 1 Hz only the servo's combined delay is identifiable: within 5% in 100% of units, while ω_n and dead time individually are within 5% in only 33–50% and 13–18%. v1.0 R-I1 fails for every protocol. Revised R-I1 (with damping gated at 20%): D-optimal 72%, limited by μ. Revised gate item 3 (κ and combined delay only): met, both within 5% in 100% of units. v1.0 H1: 40% [95% CI 28–52%], not supported. With a time-to-within-10%-of-floor comparison: D-optimal median 5 s vs chirp 15 s (paired Wilcoxon p ≈ 2e-11).</td>
+</tr>
+</tbody>
+</table></div>
+</main>
+<footer>
+  <p>Pendulum Lab &middot; Yagyaansh Khaneja &middot; 2026. Every number on these pages comes from a logged run.
+  The source code is in a private repository.</p>
+  <p><a href="index.html">Overview</a> &middot; <a href="twin.html">3D replay</a> &middot;
+  <a href="report.html">Technical report</a> &middot; <a href="report.pdf">PDF</a></p>
+</footer>
+</body>
+</html>
