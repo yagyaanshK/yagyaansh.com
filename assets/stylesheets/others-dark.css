@@ -1,3 +1,12 @@
+/* ====================================================================
+   READABILITY EDITS by Claude Code Fable 5.1 (High), 2026-11-05.
+   Nothing written by the original author was deleted. Where a line was
+   changed, the original is kept directly above it as a comment starting
+   with "ORIGINAL:" and the replacement line ends with "CLAUDE:".
+   Entirely new rules sit between "CLAUDE START" and "CLAUDE END".
+   Everything else in this file is the original author's code.
+   ==================================================================== */
+
 /* http://meyerweb.com/eric/tools/css/reset/ 
    v2.0 | 20110126
    License: none (public domain)
@@ -72,13 +81,15 @@ body{
 	background-color: #11264c;	
 	margin: 0;
 	font-family: 'Quicksand','Poppins','Satisfy', cursive,'Oswald', 'lvnm', 'FuturaPTBold', 'Gabriola', sans-serif;
-	line-height: 1.3;	
+	/* ORIGINAL: line-height: 1.3; */
+	line-height: 1.5; /* CLAUDE: more breathing room between wrapped lines */
     /* max-width: max-content; */
     text-align: center;
 }
 
 nav.top{	
-	display: inline-block;
+	/* ORIGINAL: display: inline-block; */
+	display: flex; flex-direction: row-reverse; justify-content: space-between; align-items: flex-start; gap: 1rem; /* CLAUDE: floats replaced by flex so the two corners never overlap on narrow screens; row-reverse keeps the button on the right */
 	width: 100%;
 	/* text-align: right;	 */
 }
@@ -94,7 +105,8 @@ button.theme{
 	color: white;
 	border-style: none;
 	background-color: inherit;
-	font-size: min(4vw,16px);
+	/* ORIGINAL: font-size: min(4vw,16px); */
+	font-size: 1rem; /* CLAUDE: never smaller than 16px so the button text stays legible on phones */
 }
 
 button:hover {
@@ -119,7 +131,8 @@ main{
 }
 
 h1{
-	font-size: 15vw;
+	/* ORIGINAL: font-size: 15vw; */
+	font-size: clamp(2.5rem, 15vw, 110px); /* CLAUDE: same scaling, but with a floor on phones and a ceiling on wide monitors */
 	margin-bottom: 3%;
 	color: #ffa75f;
 	
@@ -134,10 +147,13 @@ h1{
 }
 
 h2{
-	font-size: 7vw;
+	/* ORIGINAL: font-size: 7vw; */
+	font-size: clamp(1.4rem, 7vw, 55px); /* CLAUDE: same scaling, with a floor and ceiling */
 	margin-bottom: 3%;
 	color: #ffa75f;
-	padding-left: 4rem;
+	/* ORIGINAL: padding-left: 4rem; */
+	/* CLAUDE (superseded by Claude Code Fable 5.1 (High), same day): padding-left: 0; */
+	padding-left: clamp(1.5rem, 4vw, 4rem); /* CLAUDE: same offset as the list's left padding, so the heading stays centred over the list text, as in the light theme */
 	
 	font-weight: 580;
     text-align: center;
@@ -153,7 +169,11 @@ ul{
     list-style: circle;
     color: #ffffff;
 	text-align: left;
-	padding-left: 10vw;
+	/* ORIGINAL: padding-left: 10vw; */
+	/* CLAUDE (superseded by Claude Code Fable 5.1 (High), same day): padding-left: clamp(1.5rem, 10vw, 8rem); padding-right: clamp(1rem, 4vw, 3rem); */
+	display: inline-block; /* CLAUDE: matches the light theme, so the list shrinks to its content and sits centred under the heading */
+	max-width: 100%; box-sizing: border-box; /* CLAUDE: on phones the list fills the width instead of overflowing it */
+	padding-left: clamp(1.5rem, 4vw, 4rem); padding-right: clamp(1rem, 4vw, 3rem); /* CLAUDE: same 4rem indent as the light theme on laptops, smaller on phones, plus a right gutter */
 	list-style-position: outside;
 }
 
@@ -166,7 +186,9 @@ ul a{
 li{
 	display: list-item;
 	margin-bottom: 10px;
-	font-size: 3vw;
+	overflow-wrap: anywhere; /* CLAUDE (new line): long names and links wrap instead of forcing a sideways scroll */
+	/* ORIGINAL: font-size: 3vw; */
+	font-size: clamp(1rem, 3vw, 1.5rem); /* CLAUDE: 3vw was about 12px on a phone; now never below 16px, never above 24px */
 }
 
 /* for making the circle/bullet disappear */
@@ -176,11 +198,13 @@ li.nested{
 }
 
 ul.nested, li.nested a{
-	font-size:3vw;
+	/* ORIGINAL: font-size:3vw; */
+	font-size: clamp(1rem, 3vw, 1.5rem); /* CLAUDE: nested list items follow the same floor and ceiling */
 }
 
 sup{
-	font-size: 1vw;
+	/* ORIGINAL: font-size: 1vw; */
+	font-size: 0.7em; /* CLAUDE: 1vw was unreadable on phones; now relative to the text it sits beside */
 	vertical-align: top;
 }
 
@@ -192,3 +216,13 @@ sub{
 i{
 	font-style:italic ;
 }
+
+/* ---------- CLAUDE START: visible keyboard focus (Claude Code Fable 5.1 (High)) ---------- */
+/* The reset above removes borders and outlines, so keyboard users had no
+   way to see which link or button is focused. Only shows for keyboard focus. */
+a:focus-visible,
+button:focus-visible{
+	outline: 3px solid currentColor;
+	outline-offset: 3px;
+}
+/* ---------- CLAUDE END ---------- */

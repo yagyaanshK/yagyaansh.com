@@ -1,0 +1,216 @@
+/* Stylesheet for the newer list pages (projects.html).
+   One file, two themes: dark is the default, light is switched on by
+   data-theme="light" on <html>. Sizes use clamp() so nothing depends on
+   viewport width alone. The historical pages keep their own stylesheets. */
+
+:root {
+	color-scheme: dark;
+	--bg: #11264c;
+	--fg: #ffffff;
+	--accent: #ffa75f;
+	--link: #ffffff;
+	--link-hover: #ffa75f;
+	--focus: #ffd38f;
+	--button-bg: transparent;
+	--button-hover-bg: #ffa75f;
+	--button-hover-fg: #11264c;
+	--font: 'Quicksand', 'Poppins', 'Oswald', system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
+
+:root[data-theme="light"] {
+	color-scheme: light;
+	--bg: #ffffff;
+	--fg: #11264c;
+	--accent: #72001b;
+	--link: #11264c;
+	--link-hover: #72001b;
+	--focus: #72001b;
+	--button-hover-bg: #72001b;
+	--button-hover-fg: #ffffff;
+}
+
+*, *::before, *::after {
+	box-sizing: border-box;
+}
+
+html {
+	-webkit-text-size-adjust: 100%;
+	text-size-adjust: 100%;
+}
+
+body {
+	margin: 0;
+	background-color: var(--bg);
+	color: var(--fg);
+	font-family: var(--font);
+	font-size: clamp(1rem, 0.9rem + 0.5vw, 1.25rem);
+	line-height: 1.5;
+}
+
+/* Top bar: home link on the left, theme button on the right. */
+nav.top {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	gap: 1rem;
+	padding: 0.75rem clamp(1rem, 4vw, 2rem);
+}
+
+.homepage a,
+button.theme {
+	display: inline-flex;
+	align-items: center;
+	min-height: 44px;            /* comfortable tap target */
+	padding: 0.5rem 0.75rem;
+	font: inherit;
+	color: var(--fg);
+	border-radius: 999px;
+}
+
+.homepage a {
+	text-decoration: underline dotted;
+	text-underline-offset: 0.2em;
+}
+
+button.theme {
+	background-color: var(--button-bg);
+	border: 1px solid currentColor;
+	cursor: pointer;
+}
+
+button.theme:hover,
+.homepage a:hover {
+	background-color: var(--button-hover-bg);
+	color: var(--button-hover-fg);
+	text-decoration: none;
+}
+
+main {
+	max-width: 72ch;
+	margin: 0 auto;
+	padding: 0 clamp(1rem, 4vw, 2rem) 4rem;
+}
+
+h1 {
+	margin: 0.5rem 0 1.5rem;
+	font-size: clamp(2.5rem, 10vw, 6.5rem);
+	font-weight: 500;
+	line-height: 1.05;
+	color: var(--accent);
+	text-align: center;
+	overflow-wrap: anywhere;
+}
+
+h2 {
+	margin: 2.5rem 0 0.75rem;
+	font-size: clamp(1.5rem, 4vw, 2.5rem);
+	font-weight: 500;
+	line-height: 1.15;
+	color: var(--accent);
+	text-align: center;
+}
+
+h2:first-of-type {
+	margin-top: 1rem;
+}
+
+/* Sub-group label inside a section (e.g. Open Source → Linux desktop). */
+h3 {
+	margin: 1.5rem 0 0.5rem;
+	font-size: clamp(1.1rem, 2.5vw, 1.5rem);
+	font-weight: 500;
+	line-height: 1.2;
+	color: var(--fg);
+	text-align: left;
+}
+
+h2 + h3 {
+	margin-top: 0.75rem;
+}
+
+/* One-line note under a section heading. */
+.section-note {
+	margin: -0.25rem 0 0.75rem;
+	text-align: center;
+	font-size: 0.9em;
+	opacity: 0.8;
+}
+
+ul {
+	margin: 0;
+	padding-left: 1.5em;
+	list-style: circle;
+	text-align: left;
+}
+
+li {
+	margin-bottom: 0.6em;
+	overflow-wrap: anywhere;   /* long URLs and names never force a horizontal scroll */
+}
+
+li a {
+	color: var(--link);
+	text-decoration: underline;
+	text-decoration-thickness: 0.08em;
+	text-underline-offset: 0.15em;
+}
+
+li a:hover {
+	color: var(--link-hover);
+}
+
+/* Credit links (e.g. a collaborator's name): look like plain text until
+   hovered or focused, so they do not compete with the project names. */
+li a.credit {
+	color: inherit;
+	text-decoration: none;
+}
+
+li a.credit:hover,
+li a.credit:focus-visible {
+	color: var(--link-hover);
+	text-decoration: underline;
+	text-decoration-thickness: 0.08em;
+	text-underline-offset: 0.15em;
+}
+
+/* Keyboard users always get a visible focus ring. */
+a:focus-visible,
+button:focus-visible {
+	outline: 3px solid var(--focus);
+	outline-offset: 3px;
+	border-radius: 2px;
+}
+
+sup {
+	font-size: 0.7em;
+	line-height: 0;
+	vertical-align: super;
+}
+
+.fa_custom {
+	margin-left: 0.1em;
+}
+
+i {
+	font-style: italic;
+}
+
+/* Text for screen readers only (e.g. "opens in new tab"). */
+.sr-only {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	padding: 0;
+	margin: -1px;
+	overflow: hidden;
+	clip: rect(0, 0, 0, 0);
+	white-space: nowrap;
+	border: 0;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+	a, button {
+		transition: color 0.2s ease-in-out, background-color 0.2s ease-in-out;
+	}
+}
